@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>GitHubClientID</key>
+	<string>$(GITHUB_CLIENT_ID)</string>
+	<key>SUFeedURL</key>
+	<string>https://nnwoo.com/profolio/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>bkagML9DKqcKj3iaUtE9yuG64qXFlstuovkgVP2is4k=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>PFReleaseStage</key>
+	<string>$(RELEASE_STAGE)</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Profolio Portfolio</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.nnwoo.pofole.portfolio</string>
+			</array>
+			<key>LSTypeIsPackage</key>
+			<true/>
+			<key>NSDocumentClass</key>
+			<string>$(PRODUCT_MODULE_NAME).SiteDocument</string>
+		</dict>
+	</array>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.nnwoo.pofole.portfolio</string>
+			<key>UTTypeDescription</key>
+			<string>Profolio Portfolio</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>com.apple.package</string>
+				<string>public.composite-content</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>portfolio</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+</dict>
+</plist>
