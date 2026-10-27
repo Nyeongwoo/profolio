@@ -1,0 +1,4538 @@
+:root {
+  /* Page side gutter — the site's 22% text margin on desktop. Tablets
+     (601–1024) don't need that much air, so it tightens there; mobile rules
+     set their own 20px. Everything that aligns to the gutter reads these two
+     (percent for padding/margins, --gutter-k for calc() against a capped
+     width), so they stay in step. */
+  --gutter: 22%;
+  --gutter-k: 0.22;
+}
+@media (min-width: 601px) and (max-width: 1024px) {
+  :root { --gutter: 6%; --gutter-k: 0.06; }
+}
+
+/* Korean/Chinese pages: Latin text keeps the site font, CJK glyphs fall
+   through to a CJK face (loaded only on those pages, see src/i18n). Korean
+   breaks lines between words, not mid-word. */
+:root:lang(ko) { --cjk-font: 'Pretendard Variable', Pretendard, 'Apple SD Gothic Neo',; }
+:root:lang(zh-Hans) { --cjk-font: 'Noto Sans SC Variable', 'PingFang SC', 'Microsoft YaHei',; }
+:root:lang(ko) body { word-break: keep-all; overflow-wrap: anywhere; }
+
+html { scroll-behavior: smooth; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* Editor-authored inline bold defaults to the browser's fixed UA weight (~700),
+   which ignores whatever font-weight the surrounding line declares — so bolding
+   part of a line and later changing that line's weight leaves the bolded part
+   stuck. `bolder` instead computes relative to the inherited weight, so it stays
+   one step heavier than its context no matter what that context's weight is. */
+b, strong { font-weight: bolder; }
+
+body {
+  font-family: var(--site-font, 'Red Hat Display', var(--cjk-font,) sans-serif);
+  color: #111;
+  background: #fff;
+  max-width: 1920px;
+  min-width: 320px;
+  margin: 0 auto;
+}
+
+/* The editor is a tool, not part of the public design the 1920px cap above
+   exists for — it should use the full window on wide monitors instead of
+   being centered in a capped column with dead margins on both sides. */
+body.editor-mode {
+  max-width: none;
+  margin: 0;
+}
+
+img {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Sits behind the navbar + detail-nav (both translucent/blur), filling the
+   region that has nothing scrolled under it yet — without this, that gap
+   just shows the plain white page background through the blur. Fixed (not
+   sticky) so it always covers exactly that screen area regardless of scroll.
+   z-index:0 (not higher) matters here: page sections like .detail-hero are
+   `position: relative` with no explicit z-index, which resolves to the same
+   stacking level as an explicit 0 — at that shared level, paint order falls
+   back to DOM order, and this element (rendered by Navbar, mounted before
+   the routed page content) paints first. That's what keeps it *behind* real
+   content once scrolled into view rather than permanently covering it; a
+   positive z-index here would paint above content-auto=0 unconditionally,
+   regardless of scroll or DOM order. */
+.nav-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: calc(var(--navbar-h, 44.5px) + var(--detail-nav-h, 0px));
+  background: var(--navbar-behind-bg-override, transparent);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ───── Navbar ───── */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px var(--gutter);
+  box-sizing: border-box;
+  background: var(--navbar-bg-override, #fff);
+  /* Bleeds the background past body's max-width:1920px cap to the true
+     viewport edge. (A true 100vw breakout was tried instead, but padding
+     percentages resolve against the containing block, not this element's
+     own new width, so it desynced the logo/links from the 22% gutter every
+     other section uses — this box-shadow approach keeps the box itself
+     at its normal 1920px-capped size, so the padding stays correct.) */
+  box-shadow: 0 0 0 100vmax var(--navbar-bg-override, #fff);
+  clip-path: inset(0 -100vmax);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  /* Reappearing is very fast but still eased — a hard instant pop (no
+     transition at all) read as a jarring jump-cut. ease-out front-loads the
+     motion (already most of the way there almost immediately) while still
+     smoothing the landing, so it can't visibly lag behind even a fast
+     scroll-up but doesn't feel like a snap. Hiding (below) keeps its own
+     slower transition since that direction isn't time-critical the same way. */
+  transition: transform 0.1s ease-out;
+}
+
+.navbar.navbar-hidden {
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+
+/* Bottom border line, bled to the true viewport edge independent of the
+   navbar box's own 1920px-capped width/padding — a real 100vw breakout
+   works fine here since this element carries no content/padding to desync. */
+.navbar::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  height: 0.5px;
+  background: var(--navbar-border-override, #e0e0e0);
+}
+
+:root.dark-nav {
+  --navbar-bg-override: #000000;
+  --navbar-text-override: #f0f0f0;
+  --navbar-border-override: #2a2a2a;
+  --navbar-bottom-bg-override: rgba(31,31,34,0.72);
+  --overview-bg-color: #1D1D1F;
+  --overview-text-color: #ffffff;
+}
+
+.navbar-logo img { width: var(--navbar-icon-size, 28px); height: var(--navbar-icon-size, 28px); object-fit: contain; }
+.navbar-logo-dark { display: none; }
+:root.dark-nav .navbar-logo-light { display: none; }
+:root.dark-nav .navbar-logo-dark { display: block; }
+
+.navbar-search-icon-dark { display: none; }
+:root.dark-nav .navbar-search-icon-light { display: none; }
+:root.dark-nav .navbar-search-icon-dark { display: block; }
+
+.navbar-right { display: flex; align-items: center; gap: 32px; }
+
+.navbar-links { display: flex; gap: 32px; list-style: none; }
+
+.navbar-links a { font-size: var(--navbar-font-size, 12px); font-weight: 400; color: var(--navbar-text-override, #555); text-decoration: none; }
+
+.navbar-links a:hover,
+.navbar-links a.active {
+  color: var(--navbar-text-override, #000);
+  font-weight: 400;
+  text-shadow: 0 0 0.4px currentColor, 0 0 0.4px currentColor;
+}
+
+.navbar-search {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--navbar-text-override, #555);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+/* ───── Search Overlay ───── */
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 80px;
+}
+
+.search-box {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 20px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+  overflow: hidden;
+}
+
+.search-input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  font-family: inherit;
+  color: #111;
+  background: none;
+}
+
+.search-input::placeholder { color: #8a8a8a; }
+
+.search-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #aaa;
+  padding: 4px;
+  line-height: 1;
+}
+
+.search-close:hover { color: #111; }
+
+.search-results { max-height: 440px; overflow-y: auto; padding: 8px 0; }
+
+.search-hint,
+.search-empty {
+  padding: 24px 20px;
+  font-size: 13px;
+  color: #aaa;
+  text-align: center;
+}
+
+.search-group { padding: 12px 0 4px; }
+
+.search-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0 20px 6px;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  gap: 16px;
+}
+
+.search-result-item:hover { background: #f8f8f8; }
+
+.search-result-title {
+  font-size: 14px;
+  color: #111;
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-result-meta {
+  font-size: 12px;
+  color: #aaa;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ───── Footer ───── */
+/* box-shadow bleeds the background past body's max-width:1920px cap to the
+   true viewport edge on wide screens, while padding/content stay aligned
+   to the 22% gutter of the (unchanged) box itself. */
+.footer { background: #F5F5F7; box-shadow: 0 0 0 100vmax #F5F5F7; clip-path: inset(0 -100vmax); padding: 40px var(--gutter); box-sizing: border-box; }
+
+.footer-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+  padding-top: 24px;
+  border-top: 0.5px solid rgba(0,0,0,0.2);
+}
+
+.footer-logo img { width: 24px; height: 24px; object-fit: contain; }
+
+.footer-breadcrumb { font-size: 13px; color: #555; }
+
+.footer-grid {
+  display: grid;
+  /* One column per footer column (set inline from footerColumns), so adding
+     a column never wraps the last one onto its own row. */
+  grid-template-columns: repeat(var(--footer-cols, 5), minmax(0, 1fr));
+  gap: 32px;
+  margin-bottom: 32px;
+}
+
+.footer-col h4 { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+
+.footer-col ul { list-style: none; }
+
+.footer-col li { margin-bottom: 8px; }
+
+.footer-col a { font-size: 13px; color: #333; text-decoration: none; }
+
+/* Chevron only does anything on mobile (see accordion rules below) —
+   desktop keeps the plain non-interactive heading look. */
+.footer-col-chevron { display: none; }
+
+.footer-toprow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #555;
+}
+
+.footer-lang { position: relative; display: inline-flex; }
+.footer-lang-btn {
+  display: inline-flex; align-items: center; gap: 5px; padding: 0; border: none; background: none;
+  font: inherit; color: inherit; cursor: pointer;
+}
+.footer-lang-btn:hover { color: #111; }
+/* Opens upward — the switcher sits on the footer's last line. */
+.footer-lang-menu {
+  position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 20; list-style: none; margin: 0;
+  min-width: 132px; padding: 6px; background: #fff; border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+.footer-lang-menu a, .footer-lang-menu span {
+  display: block; padding: 7px 10px; border-radius: 6px; color: #333; text-decoration: none; white-space: nowrap;
+}
+.footer-lang-menu a:hover { background: #f5f5f7; color: #111; }
+.footer-lang-menu .footer-lang-current { font-weight: 600; color: #111; }
+.footer-lang-menu .footer-lang-current::after { content: ' ✓'; }
+.footer-sitemap { color: #555; text-decoration: none; }
+.footer-sitemap:hover { color: #111; text-decoration: underline; }
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 20px;
+  border-top: 0.5px solid rgba(0,0,0,0.2);
+  font-size: 12px;
+  color: #555;
+}
+
+.footer-lang { color: #555; }
+
+/* ───── Shared ───── */
+main { width: 100%; }
+
+.img-placeholder { width: 100%; height: 100%; background: #e6e6e6; border-radius: 8px; }
+
+.img-placeholder-wide { width: 100%; height: 400px; background: #e6e6e6; }
+
+.btn-outline {
+  display: inline-block;
+  padding: 8px 22px;
+  border: 1px solid rgba(255,255,255,0.6);
+  border-radius: 40px;
+  font-size: 12px;
+  color: #fff;
+}
+
+.btn-dark {
+  display: inline-block;
+  padding: 12px 32px;
+  background: #111;
+  color: #fff;
+  border-radius: 40px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  margin-top: 4px;
+}
+
+.btn-dark:hover { background: #333; }
+
+/* ───── Animations ───── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pageFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.page-fade {
+  opacity: 0;
+  animation: pageFadeIn 0.4s ease forwards;
+}
+
+/* ───── Home Hero ───── */
+.home-hero {
+  position: relative;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Breaks the hero photo out of body's max-width:1920px cap to the true
+   viewport edge on wide screens — skipped for the --inset variant, where the
+   padding is a deliberate frame around the photo, not a layout constraint. */
+.home-hero:not(.home-hero--inset),
+.detail-hero,
+.page-hero {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Past 1920×1080 the hero photo stops scaling up with the viewport and
+   holds at its native size instead, exposing the page's own white
+   background as margins on the sides — left/transform above still center
+   this narrower-than-100vw box correctly. */
+.home-hero:not(.home-hero--inset) {
+  max-width: 1920px;
+  max-height: 1080px;
+}
+
+/* Inset style: padding on the section itself pushes .home-hero-bg (inset:0)
+   in from the edges, same mechanism as the featured/grid card inset above —
+   the section's own background shows through as a proportional margin. */
+.home-hero--inset {
+  box-sizing: border-box;
+}
+
+.home-hero-bg { position: absolute; inset: 0; z-index: 0; }
+
+.hero-scroll-hint {
+  position: fixed;
+  bottom: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  color: #111;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.6s ease, visibility 0.6s ease;
+  pointer-events: none;
+  width: 62px;
+  height: 62px;
+  background: #F5F5F7;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hero-scroll-hint.visible {
+  opacity: 1;
+  visibility: visible;
+  animation: heroScrollBounce 1.6s ease-in-out infinite;
+}
+
+@keyframes heroScrollBounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%       { transform: translateX(-50%) translateY(8px); }
+}
+
+
+/* ───── Home Featured Cards ───── */
+.home-full-card {
+  display: block;
+  position: relative;
+  text-decoration: none;
+  color: #fff;
+  height: 56vw;
+  max-height: 560px;
+  min-height: 400px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+/* Same breakout as .home-hero: past body's max-width:1920px cap, this card
+   would otherwise sit inside the centered column and expose the page's own
+   white background as margins on the sides. */
+.home-full-card:not(.home-full-card--inset) {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.home-full-card-bg {
+  position: absolute;
+  inset: 0;
+  background: #e6e6e6;
+  z-index: 0;
+}
+
+.home-full-card-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  text-align: center;
+  gap: 12px;
+  padding: 0 40px 80px;
+}
+
+/* Inset style: padding on the card itself pushes the absolutely-positioned
+   bg/overlay children in from the edges (their `inset:0` resolves against
+   the padding box), so the card's own background-color/image shows through
+   as a margin around the photo — and stays proportional if the page shrinks,
+   since the inset is a % rather than a fixed px value. */
+.home-full-card--inset {
+  box-sizing: border-box;
+}
+
+.home-full-card-svg {
+  width: auto;
+  height: 60px;
+  max-width: 280px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+
+.home-full-card-tagline {
+  font-size: 20px;
+  color: #fff;
+  opacity: 0.9;
+  margin: 0;
+}
+
+/* ───── Home Grid Cards ───── */
+.home-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 10px;
+  gap: 10px;
+  /* Same breakout as .home-hero/.home-full-card: past body's max-width:1920px
+     cap, this grid would otherwise sit inside the centered column and expose
+     the page's own white background as margins on the sides. */
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Past the same 1920px cap there's enough room for a third column instead of
+   stretching two cards wider and wider. */
+@media (min-width: 1920px) {
+  .home-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+/* Each .home-grid section fills its row before spilling into a 4th card:
+   below 1920px only the first 2 cards show (2-column layout), and at 1920px+
+   the 3rd shows too (3-column layout) — a 4th card stays hidden either way
+   since there's no 4-column layout. nth-child resets per .home-grid, so a
+   section with its own 2-3 cards needs no per-card flag to get this. */
+.home-grid > .home-grid-card:nth-child(n+3) {
+  display: none;
+}
+@media (min-width: 1920px) {
+  .home-grid > .home-grid-card:nth-child(3) {
+    display: block;
+  }
+}
+
+.home-grid-card {
+  position: relative;
+  height: 40vw;
+  max-height: 460px;
+  min-height: 300px;
+  display: block;
+  text-decoration: none;
+  color: #111;
+  border: 0.5px solid #e0e0e0;
+  overflow: hidden;
+}
+
+.home-grid-card--inset {
+  box-sizing: border-box;
+}
+
+.home-grid-card-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+  gap: 12px;
+  padding: 80px 40px 0;
+}
+
+/* ───── Home Originals ───── */
+.home-originals { padding: 60px 0 0; }
+
+/* Same breakout as .home-hero/.home-full-card/.home-grid: past body's
+   max-width:1920px cap, this section would otherwise sit inside the centered
+   column and expose the page's own white background as margins on the
+   sides. Skipped for --inset, whose side padding is a deliberate frame. */
+.home-originals:not(.home-originals--inset) {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.home-originals h2 { font-size: 20px; font-weight: 400; text-align: center; margin-bottom: 16px; }
+.home-originals:not(.home-originals--inset) h2 { padding: 0 40px; }
+.home-originals-desc { text-align: center; color: #555; font-size: 13px; margin-bottom: 24px; max-width: 640px; margin-left: auto; margin-right: auto; line-height: 1.7; padding: 0 20px; }
+
+.home-originals-banner {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  padding: 0 5%;
+  cursor: grab;
+}
+
+.home-originals-banner:active { cursor: grabbing; }
+
+.home-originals-track { display: flex; gap: 10px; will-change: transform; }
+
+.home-originals-slide {
+  flex: 0 0 90%;
+  aspect-ratio: 16/9;
+  border-radius: 0;
+  overflow: hidden;
+  opacity: 0.5;
+  transition: opacity 0.6s ease;
+  cursor: grab;
+}
+
+/* Past 1440px there's room for 2 full-opacity "main" slides side by side
+   instead of 1 (plus the usual peek at each edge) — Home.jsx's offset/active
+   math (see isWideCarousel) matches this same 45% fraction. */
+@media (min-width: 1440px) {
+  .home-originals-slide {
+    flex: 0 0 45%;
+  }
+}
+
+.home-originals-slide.active { opacity: 1; }
+
+.home-originals-dots {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-bottom: 40px;
+}
+
+.home-originals-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.2);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.home-originals-dot.active { background: #111; }
+
+/* ───── About ───── */
+.about-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--about-intro-top-gap, 60px) var(--gutter) 60px;
+  box-sizing: border-box;
+  gap: 40px;
+}
+
+.about-intro-text h1 { font-size: 32px; font-weight: 500; margin-bottom: var(--about-intro-title-gap, 20px); }
+
+.about-intro-text p { font-size: 14px; font-weight: 500; line-height: 1.8; color: #444; max-width: 560px; }
+
+/* Photo-align mode: title stays pinned at the top (unaffected), only the
+   description's bottom edge is pushed down to match the photo's bottom —
+   achieved by stretching the text column to the photo's height and letting
+   the paragraph's auto top-margin eat the extra space. The manual gap
+   settings above (--about-intro-top-gap / --about-intro-title-gap) have no
+   effect in this mode since the auto margin overrides any fixed gap. */
+.about-intro--photo-align { align-items: stretch; }
+.about-intro--photo-align .about-intro-text { display: flex; flex-direction: column; }
+.about-intro--photo-align .about-intro-text h1 { margin-bottom: 20px; }
+.about-intro--photo-align .about-intro-text p { margin-top: auto; }
+
+/* Image size is tuned per breakpoint (not auto-derived from text height) so
+   it stays visually balanced against the text column at every width.
+   Mobile always fills 100% width (see the max-width:600px block below), so
+   only tablet (601-1024) and desktop (1025+) sizes need to be tunable. */
+.about-intro-image { flex-shrink: 0; }
+.about-intro-image img { width: var(--about-profile-size-tablet, 300px); height: var(--about-profile-size-tablet, 300px); object-fit: cover; border-radius: 12px; }
+
+@media (min-width: 1025px) {
+  .about-intro-image img { width: var(--about-profile-size-desktop, 360px); height: var(--about-profile-size-desktop, 360px); }
+}
+
+/* ───── Contacts — text-only intro (no photo) ───── */
+.contacts-intro {
+  padding: var(--contacts-intro-top-gap, 60px) var(--gutter) 60px;
+  box-sizing: border-box;
+}
+
+.contacts-intro h1 { font-size: 32px; font-weight: 500; margin-bottom: var(--contacts-intro-title-gap, 20px); }
+
+.contacts-intro p { font-size: 14px; font-weight: 500; line-height: 1.8; color: #444; max-width: 500px; }
+
+/* ───── Contacts — message form ───── */
+.contacts-form {
+  padding: 60px var(--gutter);
+  box-sizing: border-box;
+  display: flex;
+  gap: 64px;
+  font-family: var(--contacts-form-font, inherit);
+}
+
+.contacts-form-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.contacts-form-field { display: flex; flex-direction: column; gap: 10px; max-width: 480px; }
+
+.contacts-form-field label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--contacts-form-label-color, #111);
+}
+
+.contacts-form-field input,
+.contacts-form-field textarea {
+  border: none;
+  border-bottom: 1px solid var(--contacts-form-line-color, #ddd);
+  background: transparent;
+  font-family: inherit;
+  font-size: 18px;
+  color: var(--contacts-form-input-color, #111);
+  padding: 6px 0 10px;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.contacts-form-field input::placeholder,
+.contacts-form-field textarea::placeholder { color: #909090; }
+
+.contacts-form-field input:focus,
+.contacts-form-field textarea:focus { border-color: var(--contacts-form-input-color, #111); }
+
+.contacts-form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--contacts-form-label-color, #444);
+  cursor: pointer;
+  max-width: 480px;
+}
+.contacts-form-checkbox input { accent-color: var(--contacts-form-button-bg, #111); width: 15px; height: 15px; flex-shrink: 0; }
+
+.contacts-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  max-width: 480px;
+}
+
+.contacts-form-error { font-size: 13px; color: #e53e3e; }
+
+.contacts-form-actions button {
+  border: none;
+  border-radius: var(--contacts-form-button-radius, 10px);
+  padding: 14px 28px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--contacts-form-button-text, #fff);
+  background: var(--contacts-form-button-bg, #111);
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+
+.contacts-form-actions button:disabled {
+  background: #d8d8d8;
+  color: #fff;
+  cursor: default;
+  filter: none;
+}
+
+.contacts-form-actions button:not(:disabled):hover { filter: brightness(0.85); }
+
+.contacts-form-done {
+  padding: 60px var(--gutter);
+  box-sizing: border-box;
+  text-align: center;
+  font-size: 15px;
+  color: #555;
+  font-family: var(--contacts-form-font, inherit);
+}
+
+@media (max-width: 768px) {
+  .contacts-form,
+  .contacts-form-done { padding: 40px 20px; }
+  .contacts-form { flex-direction: column; gap: 28px; }
+}
+
+.about-strategy { background: #f5f5f5; box-shadow: 0 0 0 100vmax #f5f5f5; clip-path: inset(0 -100vmax); padding: 60px var(--gutter); box-sizing: border-box; }
+
+.about-philosophy { background: #111; box-shadow: 0 0 0 100vmax #111; clip-path: inset(0 -100vmax); color: #fff; padding: 60px var(--gutter); box-sizing: border-box; }
+
+.about-philosophy blockquote {
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-align: center;
+  margin-bottom: 16px;
+  font-style: italic;
+}
+
+.about-philosophy p { text-align: center; font-size: 14px; color: #aaa; margin-bottom: 40px; }
+
+.about-cv { display: flex; justify-content: center; padding: 40px; }
+
+/* Category page — align sections with hero left edge (60px) */
+.cat-sections .detail-section-mid { padding-left: var(--gutter); padding-right: var(--gutter); box-sizing: border-box; }
+.cat-sections .bc-track { padding-left: var(--gutter); }
+/* Text-section body default: desktop 17px / tablet 15px / mobile 14px —
+   matches .about/.contacts .detail-section-mid p and .detail-section-text-body p. */
+.cat-sections .detail-section-mid p {
+  font-size: 17px;
+  line-height: 1.8;
+  color: #444;
+}
+@media (min-width: 601px) and (max-width: 1024px) {
+  .cat-sections .detail-section-mid p { font-size: 15px; }
+}
+@media (max-width: 600px) {
+  .cat-sections .detail-section-mid p { font-size: 14px; }
+}
+
+/* About page — align CategorySections text style with about page typography */
+.about .detail-section-mid {
+  padding: 60px var(--gutter);
+  box-sizing: border-box;
+  gap: 40px;
+}
+.about .detail-section-mid h2 {
+  font-size: 24px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  color: #111;
+}
+.about .detail-section-mid p {
+  font-size: 17px;
+  line-height: 1.8;
+  color: #444;
+}
+
+/* Contacts page — same gutter as .about, but Contacts had no equivalent
+   rule at all: CategorySections' generic .detail-section-mid only gets
+   padding here or under .cat-sections/.about — the <div className="contacts">
+   wrapper matches none of those, so any content added via contactsSections
+   rendered with zero horizontal padding, flush against the true edge. */
+.contacts .detail-section-mid {
+  padding: 60px var(--gutter);
+  box-sizing: border-box;
+  gap: 40px;
+}
+.contacts .detail-section-mid h2 {
+  font-size: 24px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  color: #111;
+}
+.contacts .detail-section-mid p {
+  font-size: 17px;
+  line-height: 1.8;
+  color: #444;
+}
+
+@media (min-width: 601px) and (max-width: 1024px) {
+  .about .detail-section-mid p,
+  .contacts .detail-section-mid p { font-size: 15px; }
+}
+@media (max-width: 600px) {
+  .about .detail-section-mid p,
+  .contacts .detail-section-mid p { font-size: 14px; }
+}
+
+.btn-cv {
+  display: inline-block;
+  padding: 16px 48px;
+  background: #111;
+  color: #fff;
+  border-radius: 40px;
+  font-size: 16px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.btn-cv:hover { background: #333; }
+
+/* ───── About Resume ───── */
+.about-resume {
+  padding: 60px 40px;
+}
+
+.about-resume h2 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+
+.about-resume-sub { font-size: 14px; color: #555; margin-bottom: 48px; }
+
+.about-resume-section {
+  border-top: 0.5px solid #e0e0e0;
+  padding: 32px 0;
+}
+
+.about-resume-section h3 {
+  font-size: 11px;
+  font-weight: 600;
+  color: #999;
+  letter-spacing: 0.08em;
+  margin-bottom: 24px;
+}
+
+.about-resume-intro {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.8;
+  margin-bottom: 24px;
+}
+
+.about-resume-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.about-resume-item-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.about-resume-item-left strong { font-size: 16px; font-weight: 600; }
+
+.about-resume-item-left span { font-size: 14px; color: #444; }
+
+.about-resume-item-desc { font-size: 13px; color: #777; margin-top: 4px; }
+
+.about-resume-item-date {
+  font-size: 13px;
+  color: #999;
+  white-space: nowrap;
+  margin-left: 40px;
+}
+
+.about-resume-skills { font-size: 14px; color: #444; line-height: 1.8; }
+
+/* ───── About Photos ───── */
+.about-photos { padding: 60px var(--gutter); box-sizing: border-box; }
+
+/* Stack to a single column / tighten side padding only on true mobile —
+   tablet keeps the desktop layout and padding. Placed after all the base
+   .about-* padding rules above so it reliably wins at mobile widths
+   regardless of source order (equal specificity otherwise). */
+@media (max-width: 600px) {
+  .about-intro {
+    flex-direction: column;
+    padding: var(--about-intro-top-gap-mobile, var(--about-intro-top-gap, 40px)) 20px 40px;
+    gap: 24px;
+  }
+  .about-intro-image {
+    width: 100%;
+  }
+  .about-intro-image img {
+    width: 100%;
+    max-width: none;
+    height: auto;
+  }
+  .about-intro-text h1 {
+    margin-bottom: var(--about-intro-title-gap-mobile, var(--about-intro-title-gap, 20px));
+  }
+  .contacts-intro {
+    padding: var(--contacts-intro-top-gap-mobile, var(--contacts-intro-top-gap, 40px)) 20px 40px;
+  }
+  .contacts-intro h1 {
+    margin-bottom: var(--contacts-intro-title-gap-mobile, var(--contacts-intro-title-gap, 20px));
+  }
+  .about-photos { padding: 40px 20px; }
+  .about .detail-section-mid { padding: 40px 20px; }
+  .about-strategy { padding: 40px 20px; }
+  .about-philosophy { padding: 40px 20px; }
+  .contacts .detail-section-mid { padding: 40px 20px; }
+}
+
+.about-photos h2 { font-size: 24px; font-weight: 500; margin-bottom: 32px; }
+
+.about-photos-carousel {
+  overflow: hidden;
+  padding: 0;
+  cursor: grab;
+}
+
+.about-photos-carousel:active { cursor: grabbing; }
+
+.about-photos-track {
+  display: flex;
+  gap: 12px;
+  will-change: transform;
+  transition: transform 0.4s ease;
+}
+
+/* Mobile-first: 1 photo per view. Tablet: 2 per view. Desktop: ~3 per view (30vw).
+   Height is set inline in px by About.jsx (measured off the rendered slide
+   width) rather than via aspect-ratio or the padding-top trick — aspect-ratio
+   has had cross-browser bugs on flex items with a calc() flex-basis, and the
+   padding-top hack resolves its percentage against the flex *container's*
+   width (not the item's own, narrower width), which produced a tall
+   rectangle instead of a square here. An explicit pixel height sidesteps
+   both. */
+.about-photos-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  aspect-ratio: 1/1; /* fallback for the one frame before JS measures and sets an inline px height */
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.about-photos-slide img { width: 100%; height: 100%; object-fit: cover; }
+
+@media (min-width: 601px) and (max-width: 1024px) {
+  .about-photos-slide {
+    flex: 0 0 calc(50% - 6px);
+    width: calc(50% - 6px);
+  }
+}
+
+@media (min-width: 1025px) {
+  .about-photos-slide {
+    flex: 0 0 calc((100% - 24px) / 3);
+    width: calc((100% - 24px) / 3);
+  }
+}
+
+.about-photos-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 45%, transparent 85%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 20px 16px 16px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.about-photos-slide:hover .about-photos-overlay { opacity: 1; }
+
+.about-photos-overlay-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 4px;
+  line-height: 1.3;
+  white-space: pre-line;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.55);
+}
+.about-photos-overlay-year {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.9);
+  margin: 0 0 4px;
+  line-height: 1.3;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.55);
+}
+.about-photos-overlay-desc {
+  font-size: 12px;
+  color: rgba(255,255,255,0.88);
+  margin: 0;
+  line-height: 1.5;
+  white-space: pre-line;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.55);
+}
+
+/* ───── Filter Bar ───── */
+.filter-bar-fixed {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(245,245,247,0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 40px;
+  position: fixed;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  white-space: nowrap;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.filter-bar-fixed.filter-bar-hidden {
+  transform: translateX(-50%) translateY(-120%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.filter-item { padding: 8px 24px; border-radius: 40px; font-size: 14px; color: #555; text-decoration: none; }
+
+.filter-item:hover { color: #111; }
+
+.filter-item.active { background: #fff; color: #111; font-weight: 500; }
+
+/* ───── Projects ───── */
+.projects-category-hero {
+  width: 100%;
+  /* Was a fixed 400px, which clipped icons once Icon Size (Desktop) was
+     raised past ~200px — min-height keeps the old look at the default size
+     while letting the box grow to fit a larger configured icon size. */
+  min-height: 400px;
+  height: auto;
+  padding-bottom: 40px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+  box-sizing: border-box;
+  gap: var(--category-hero-gap, 64px);
+}
+
+/* Site Structure ▸ project icons off: no strip to make room for, and the
+   cards below follow straight on. */
+.projects-category-hero.projects-category-hero--no-icons { min-height: 0; padding-bottom: 0; }
+.projects-category-list .projects-grid-all { margin-top: 0; }
+
+.projects-category-hero h2 {
+  font-size: var(--category-title-size, 56px);
+  font-weight: 700;
+  margin-top: var(--category-title-top-gap, 100px);
+}
+
+.projects-category-icons {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.projects-category-hero h2,
+.projects-category-icon-item {
+  opacity: 0;
+  animation: fadeInUp var(--category-anim-duration, 0.8s) cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Per-item stagger — `--i` is set inline (item index) in IconCarousel, so
+   the delay scales with however many icons there are instead of needing a
+   fixed nth-child rule per position. */
+.projects-category-icon-item {
+  animation-delay: calc(var(--category-anim-stagger, 0.15s) * var(--i, 0));
+}
+
+.projects-category-icon-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: #111;
+  font-size: 13px;
+}
+
+/* Labels that wrap to a second line (e.g. "MyFlow (Hyundai)") should stay
+   centered under the icon, not fall back to left-aligned wrapped text. */
+.projects-category-icon-item span {
+  text-align: center;
+}
+
+.projects-category-icon-item:not(.anim-done) { pointer-events: none; }
+
+.projects-recent { padding: var(--category-title-top-gap, 60px) var(--gutter) 40px; box-sizing: border-box; }
+
+.projects-recent h2 { font-size: var(--category-title-size, 32px); font-weight: 700; margin-bottom: var(--category-title-gap, 32px); }
+
+.archive-cta {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 32px;
+  font-size: 14px; color: #555; text-decoration: none;
+}
+.archive-cta:hover { color: #111; }
+.archive-cta span { transition: transform 0.2s ease; }
+.archive-cta:hover span { transform: translateX(3px); }
+
+.all-page-desc {
+  font-size: 14px;
+  color: #888;
+  margin: -8px 0 16px;
+  line-height: 1.6;
+}
+
+.projects-grid-all {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.projects-grid-category {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+.project-card {
+  display: block;
+  position: relative;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #111;
+  background: #f0f0f0;
+}
+
+.project-card img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 1-col feed layout: each card fades + slides up into place as it scrolls
+   into view (see useScrollReveal in Projects.jsx/Originals.jsx), instead of
+   just being visible immediately — gives the "coming up next" card a soft
+   entrance rather than an abrupt cut. */
+.projects-grid-all--feed .project-card {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.7s cubic-bezier(0.22, 0.61, 0.36, 1), transform 0.7s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.projects-grid-all--feed .project-card.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+/* Higher specificity than both the .revealed rule above and the plain
+   .project-card--zoom:hover scale below, so the "grows slightly on hover"
+   zoom style still works once a feed card has settled into place instead of
+   being silently overridden back to translateY(0) by .revealed. */
+@media (hover: hover) {
+  .projects-grid-all--feed .project-card--zoom.revealed:hover {
+    transform: translateY(0) scale(1.045);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .projects-grid-all--feed .project-card { opacity: 1; transform: none; transition: none; }
+}
+
+.project-card-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,115,235,0.35) 0%, rgba(0,115,235,0.35) 100%);
+  z-index: 1;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.project-card-caption {
+  position: absolute;
+  bottom: 12px;
+  left: 16px;
+  right: 16px;
+  z-index: 2;
+}
+
+.project-card-overlay-title {
+  color: var(--card-title-color, #fff);
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.3;
+  text-shadow: var(--card-text-shadow, 0 1px 5px rgba(0,0,0,0.5));
+}
+
+.project-card--confidential .project-card-gradient {
+  background: linear-gradient(to top, rgba(251,100,0,0.65) 0%, rgba(220,60,0,0.35) 100%);
+}
+
+.project-card-confidential-label {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  z-index: 2;
+  color: rgba(255,255,255,0.85);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+@media (hover: hover) {
+  .project-card:hover .project-card-confidential-label {
+    opacity: 1;
+  }
+}
+
+.project-card-year-label {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 2;
+  color: var(--card-caption-color, rgba(255,255,255,0.85));
+  font-size: 17px;
+  font-weight: 500;
+  text-shadow: var(--card-text-shadow, 0 1px 5px rgba(0,0,0,0.5));
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.project-card-caption-right {
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+  z-index: 2;
+  max-width: 40%;
+  text-align: right;
+  color: var(--card-caption-color, rgba(255,255,255,0.85));
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  text-shadow: var(--card-text-shadow, 0 1px 5px rgba(0,0,0,0.5));
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+/* Swaps which corner each caption sits in: the title+description block
+   (normally bottom-left) moves to the right and right-aligns, the small
+   secondary caption (normally bottom-right) moves to the left and
+   left-aligns — mirror image of the default layout. */
+.projects-grid-all--caption-swap .project-card-caption {
+  text-align: right;
+}
+.projects-grid-all--caption-swap .project-card-caption-right {
+  left: 16px;
+  right: auto;
+  text-align: left;
+}
+
+.project-card-overlay-desc {
+  color: var(--card-caption-color, rgba(255,255,255,0.85));
+  text-shadow: var(--card-text-shadow, none);
+  font-size: 12px;
+  font-weight: 400;
+  margin: 6px 0 0;
+  line-height: 1.5;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.25s ease;
+}
+
+/* ───── Project Card — Zoom hover style (no color overlay: whole card scales up slightly, caption slides/fades in) ─────
+   Driven purely by CSS :hover (not JS mouseenter/leave state) so the hovered state can't get reset mid-hover
+   by an unrelated re-render — the browser's own hit-testing owns it every frame. Touch devices (no real hover)
+   just show the caption at rest, same as the confidential-label pattern above. */
+.project-card--zoom {
+  transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
+}
+
+.project-card--zoom .project-card-caption {
+  transform: translateY(8px);
+  opacity: 0;
+  transition: transform 0.35s ease, opacity 0.35s ease;
+}
+
+@media (hover: hover) {
+  .project-card--zoom:hover {
+    transform: scale(1.045);
+    z-index: 3;
+  }
+  .project-card--zoom:hover .project-card-caption {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media not all and (hover: hover) {
+  .project-card--zoom .project-card-caption {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ───── Blog ───── */
+/* ───── Archive ───── */
+.archive { padding: 60px var(--gutter) 100px; box-sizing: border-box; }
+.archive-head h1 { font-size: 32px; font-weight: 700; margin-bottom: 24px; }
+.archive-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 48px; }
+.archive-filters button {
+  border: none; cursor: pointer; font-family: inherit; font-size: 13px;
+  padding: 7px 14px; border-radius: 40px; background: #f5f5f7; color: #555;
+  transition: background 0.15s, color 0.15s;
+}
+.archive-filters button:hover { color: #111; }
+.archive-filters button.active { background: #111; color: #fff; }
+.archive-count { opacity: 0.5; margin-left: 2px; font-variant-numeric: tabular-nums; }
+.archive-empty { font-size: 14px; color: #888; }
+
+/* Year as a left rail on desktop, stacked above its list on mobile. */
+.archive-year { display: grid; grid-template-columns: 120px 1fr; gap: 24px; padding: 28px 0; border-top: 1px solid #e5e5e7; }
+.archive-year h2 { font-size: 20px; font-weight: 700; color: #111; font-variant-numeric: tabular-nums; position: sticky; top: 90px; align-self: start; }
+.archive-year ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+
+.archive-row {
+  display: grid; grid-template-columns: 110px 1fr auto auto; align-items: center; gap: 20px;
+  padding: 14px 12px; margin: 0 -12px; border-radius: 12px;
+  color: inherit; text-decoration: none;
+}
+.archive-row--link { transition: background 0.15s; }
+.archive-row--link:hover { background: #f5f5f7; }
+.archive-row-meta { display: flex; flex-direction: column; gap: 4px; }
+.archive-type { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #888; }
+.archive-type--news { color: #0073EB; }
+.archive-type--portfolio { color: #1e8e3e; }
+.archive-date { font-size: 12px; color: #999; font-variant-numeric: tabular-nums; }
+.archive-row-body { min-width: 0; }
+.archive-row-body h3 { font-size: 16px; font-weight: 600; color: #111; line-height: 1.4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.archive-row-body p { font-size: 13px; color: #666; line-height: 1.6; margin-top: 2px; }
+.archive-flag { font-size: 11px; font-weight: 500; color: #ea580c; background: #fff4ee; padding: 2px 8px; border-radius: 20px; }
+.archive-thumb { width: 96px; height: 64px; object-fit: cover; border-radius: 8px; background: #f0f0f2; }
+.archive-thumb--icon { width: 48px; height: 48px; object-fit: contain; background: none; }
+.archive-arrow { font-size: 15px; color: #aaa; transition: transform 0.2s ease, color 0.15s; }
+.archive-row--link:hover .archive-arrow { color: #111; transform: translateX(3px); }
+
+@media (max-width: 600px) {
+  .archive { padding: 32px 20px 64px; }
+  .archive-head h1 { font-size: 28px; }
+  .archive-filters { margin-bottom: 32px; }
+  .archive-year { grid-template-columns: 1fr; gap: 8px; padding: 20px 0; }
+  .archive-year h2 { position: static; }
+  .archive-row { grid-template-columns: 1fr auto; gap: 12px; }
+  .archive-row-meta { grid-column: 1 / -1; flex-direction: row; gap: 10px; }
+  .archive-thumb { width: 72px; height: 48px; }
+  .archive-thumb--icon { width: 40px; height: 40px; }
+  .archive-arrow { display: none; }
+}
+
+.blog-hero { height: 400px; background: #e6e6e6; }
+
+.blog-list { padding: var(--blog-title-top-gap, 40px) var(--gutter) 40px; box-sizing: border-box; }
+
+.blog-list h2 { font-size: var(--blog-title-size, 24px); font-weight: var(--blog-title-weight, 500); margin-bottom: var(--blog-title-gap, 32px); }
+
+.blog-post-card {
+  display: flex;
+  gap: 24px;
+  padding: 24px 0;
+  border-bottom: 0.5px solid #e0e0e0;
+  text-decoration: none;
+  color: #111;
+  position: relative;
+}
+
+.blog-post-card .img-placeholder { width: 240px; height: 160px; flex-shrink: 0; border-radius: 8px; background: #e6e6e6; }
+
+.blog-post-info { flex: 1; }
+
+.blog-post-info h3 { font-size: 24px; font-weight: 500; margin-bottom: 8px; }
+
+.blog-post-date { font-size: 13px; color: #888; margin-bottom: 8px; }
+
+.blog-post-preview { font-size: 13px; color: #444; line-height: 1.7; }
+
+.blog-post-tag { position: absolute; top: 24px; right: 0; font-size: 12px; color: #888; }
+
+.blog-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 40px;
+}
+
+.blog-pagination button { background: none; border: none; cursor: pointer; font-size: 16px; }
+
+.blog-pagination span { font-size: 14px; }
+
+/* ───── Detail Nav ───── */
+.detail-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px var(--gutter);
+  box-sizing: border-box;
+  background: var(--navbar-bottom-bg-override, rgba(245,245,247,0.72));
+  box-shadow: 0 0 0 100vmax var(--navbar-bottom-bg-override, rgba(245,245,247,0.72));
+  clip-path: inset(0 -100vmax);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  /* The real bug: `top` here is set from --navbar-h, which Navbar.jsx used
+     to measure via `offsetHeight` — always rounded to a whole px — while
+     this element's own sticky math uses the browser's fractional (subpixel)
+     layout. When the navbar's true height wasn't a whole number, that
+     rounding alone was enough to leave a ~1px sliver of whatever's
+     scrolling underneath visible between the two bars. Fixed at the source
+     in Navbar.jsx (now uses getBoundingClientRect(), which is fractional).
+     This -1px stays as a small extra safety margin on top of that. */
+  margin-top: -1px;
+  position: sticky;
+  top: var(--navbar-h, 44.5px);
+  z-index: 90;
+  /* Matches .navbar's asymmetric timing below (fast eased show / slower
+     eased hide) so both bars stay in lockstep in both directions. */
+  transition: transform 0.1s ease-out;
+}
+
+/* Navbar+detail-nav read as one bar: when the navbar slides fully offscreen
+   on scroll-down (see Navbar.jsx), detail-nav slides up by the same distance
+   to take its place, landing flush at the top instead of leaving a gap.
+   Uses `transform` (matching .navbar.navbar-hidden below) rather than
+   animating `top` — both need to be compositor-driven so they move in exact
+   lockstep instead of drifting out of sync mid-transition. Navbar.jsx only
+   ever triggers this once .detail-nav has actually reached its pinned
+   (stuck) position, since transform has no visible effect before that. */
+:root.nav-away .detail-nav {
+  transform: translateY(calc(-1 * var(--navbar-h, 44.5px)));
+  transition: transform 0.3s ease;
+}
+
+.detail-nav--hidden {
+  transform: translateY(-200%);
+  pointer-events: none;
+}
+
+.detail-nav-back a,
+.detail-nav-back button { display: flex; align-items: center; color: var(--navbar-text-override, #333); text-decoration: none; }
+
+.detail-nav-links { display: flex; gap: 32px; }
+
+.detail-nav-item { font-size: 13px; color: var(--navbar-text-override, #333); text-decoration: none; }
+
+/* ───── Detail TOC ───── */
+.detail-toc {
+  position: fixed;
+  left: 24px;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 10px;
+  /* White (not page-matching gray) so the pill still reads against a
+     near-identical light-gray section background (e.g. #F5F5F7) instead of
+     visually disappearing into it — the border adds a visible edge for the
+     same reason, since translucent-on-matching-color has ~zero contrast on
+     its own. */
+  background: rgba(255,255,255,0.62);
+  border: 1px solid rgba(0,0,0,0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  z-index: 90;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-10px) scale(1.1) translateY(-50%);
+  transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease, border-color 0.3s ease;
+  overflow: visible;
+}
+
+/* Swapped in when scroll detects the pill is sitting over a dark section
+   background (see the elementFromPoint check in ProjectDetail.jsx) — a
+   content-aware alternative to a drop shadow for staying legible on any
+   backdrop, without touching the light-mode look. */
+.detail-toc.toc-on-dark {
+  background: rgba(20,20,22,0.62);
+  border-color: rgba(255,255,255,0.1);
+}
+.detail-toc.toc-on-dark .toc-dot { background: var(--toc-color, #888); }
+.detail-toc.toc-on-dark .detail-toc-item.active .toc-dot { background: var(--toc-active-color, #fff); }
+.detail-toc.toc-on-dark .toc-label { color: var(--toc-color, #aaa); }
+.detail-toc.toc-on-dark .detail-toc-item.active .toc-label { color: var(--toc-active-color, #fff); }
+
+.detail-toc.toc-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0) scale(1) translateY(-50%);
+}
+
+.detail-toc:hover {
+  align-items: flex-start;
+}
+
+.detail-toc-item {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 4px 0;
+  text-decoration: none;
+}
+
+.toc-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--toc-color, #ccc);
+  flex-shrink: 0;
+  transition: opacity 0.35s ease, width 0.35s ease;
+}
+
+.detail-toc-item.active .toc-dot { background: var(--toc-active-color, #444); }
+
+/* on TOC hover: hide all dots */
+.detail-toc:hover .toc-dot {
+  opacity: 0;
+  width: 0;
+}
+
+.toc-label {
+  font-size: 12px;
+  color: var(--toc-color, #555);
+  white-space: nowrap;
+  opacity: 0;
+  max-width: 0;
+  margin-left: 0;
+  overflow: hidden;
+  transition: opacity 0.35s ease, max-width 0.35s ease, margin-left 0.35s ease;
+}
+
+/* on TOC hover: show all labels */
+.detail-toc:hover .toc-label {
+  opacity: 1;
+  max-width: 200px;
+  margin-left: 0;
+}
+
+.detail-toc-item.active .toc-label { color: var(--toc-active-color, #333); font-weight: 600; }
+
+:root.dark-nav .detail-toc { background: rgba(35,35,38,0.62); border-color: rgba(255,255,255,0.1); }
+:root.dark-nav .toc-dot { background: var(--toc-color, #666); }
+:root.dark-nav .detail-toc-item.active .toc-dot { background: var(--toc-active-color, #f0f0f0); }
+:root.dark-nav .toc-label { color: var(--toc-color, #aaa); }
+:root.dark-nav .detail-toc-item.active .toc-label { color: var(--toc-active-color, #fff); }
+
+/* Always-show-labels option: skip the dot/hover-reveal dance, labels are
+   always expanded (same visual end-state the hover transition already
+   produces, just permanent). */
+.detail-toc.toc-always-labels { align-items: flex-start; }
+.detail-toc.toc-always-labels .toc-dot { opacity: 0; width: 0; }
+.detail-toc.toc-always-labels .toc-label { opacity: 1; max-width: 200px; margin-left: 0; }
+
+/* Background option: none — fully transparent, no pill/blur */
+.detail-toc.toc-bg-none {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Background option: gradient — a left-edge scrim that dims hero imagery
+   bleeding in behind the TOC while keeping the label text readable, instead
+   of a hard pill shape. */
+.detail-toc.toc-bg-gradient {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.detail-toc.toc-bg-gradient::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100%;
+  background: linear-gradient(to right, rgba(245,245,247,0.85) 0%, rgba(245,245,247,0.55) 45%, rgba(245,245,247,0) 100%);
+  z-index: -1;
+  pointer-events: none;
+}
+:root.dark-nav .detail-toc.toc-bg-gradient::before {
+  background: linear-gradient(to right, rgba(17,17,17,0.85) 0%, rgba(17,17,17,0.55) 45%, rgba(17,17,17,0) 100%);
+}
+
+/* Editor-only section TOC: labels stay expanded permanently instead of only
+   revealing on hover (there's no reason to hide them here — the pill isn't
+   competing for space against page content the way the public nav is), and
+   whichever one the cursor is actually on bolds (not just the scroll-active
+   one). Scoped to .ed-section-toc on purpose — the public site's TOC keeps
+   its own hover-to-reveal behavior. */
+.ed-section-toc {
+  align-items: flex-start;
+  background: var(--ed-card-bg);
+  border: 1px solid var(--ed-card-border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.ed-section-toc .toc-dot { opacity: 0; width: 0; }
+.ed-section-toc .toc-label { opacity: 1; max-width: 200px; margin-left: 0; color: var(--ed-text-muted); white-space: normal; }
+.ed-section-toc .detail-toc-item:hover .toc-label { font-weight: 600; color: var(--ed-text); }
+.ed-section-toc .detail-toc-item { align-items: flex-start; padding: 6px 0; }
+.ed-section-toc .toc-label-group { display: flex; flex-direction: column; gap: 2px; }
+.ed-section-toc .toc-id { font-size: 10px; color: var(--ed-text-faint, #999); max-width: 200px; white-space: normal; word-break: break-word; }
+/* The public TOC's z-index (90) let this sticky pill slide over the
+   editor's own sticky tab bar (z 20) while scrolling. And at a fixed 200px it
+   ate a third of a narrow form column (laptop + preview open), squeezing the
+   section cards. Cap it relative to the column and, when the page itself is
+   narrow, collapse each entry to one truncated line. */
+.ed-section-toc { z-index: 5; max-width: min(200px, 30%); }
+.ed-section-toc .detail-toc-item,
+.ed-section-toc .toc-label-group { min-width: 0; max-width: 100%; }
+@container ed-page (max-width: 720px) {
+  .ed-section-toc { padding: 8px; }
+  .ed-section-toc .detail-toc-item { padding: 3px 0; }
+  .ed-section-toc .toc-id { display: none; }
+  .ed-section-toc .toc-label { white-space: nowrap; text-overflow: ellipsis; max-width: 100%; font-size: 11px; }
+}
+
+/* ───── Detail Overview ───── */
+.detail-overview {
+  display: grid;
+  grid-template-columns: 1fr minmax(160px, max-content);
+  gap: 80px;
+  padding: 60px var(--gutter);
+  box-sizing: border-box;
+  background: var(--overview-bg-color, #fff);
+  box-shadow: 0 0 0 100vmax var(--overview-bg-color, #fff);
+  clip-path: inset(0 -100vmax);
+  align-items: start;
+}
+/* Desktop-only counterpart to .detail-overview-meta--fill — grid's stretch
+   makes the meta column's box exactly as tall as the text column so the
+   space-between rows inside it can end flush with the text's bottom. */
+.detail-overview--fill { align-items: stretch; }
+
+/* Overview Max Width (author-set per project) only kicks in at Wide+
+   (>=1920px) — that's the only range where the text column has enough
+   spare room to stop wrapping and desync from the meta column's height
+   (see .detail-overview-meta below). Desktop/tablet/mobile keep the text
+   at its natural full-width flow, same as when no max-width is set at all,
+   with no per-breakpoint editor field needed. */
+@media (min-width: 1920px) {
+  .detail-overview-text p { max-width: var(--overview-max-width, none); }
+}
+
+.detail-overview-text {
+  font-size: 18px;
+  line-height: 1.8;
+  color: var(--overview-text-color, #111);
+}
+
+.detail-overview-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--overview-text-color, #111);
+  margin: 0 0 var(--overview-title-gap, 16px);
+  line-height: 1.3;
+}
+
+.detail-overview-logo {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 var(--overview-title-gap, 16px);
+}
+
+.detail-overview-subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--overview-text-color, #111);
+  margin: 0 0 16px;
+  line-height: 1.4;
+}
+
+.detail-overview-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+/* Desktop only (added via JS, gated on tier==='desktop'): stretch to match
+   the text column's exact height and space-between the 3 rows across it, so
+   the last row stays flush with the text column's bottom. Dropped for
+   tablet/mobile — forcing both ends to match spreads the rows across
+   however tall the Overview text happens to be, which reads as huge,
+   inconsistent gaps once text wraps to more lines at narrower widths. */
+.detail-overview-meta--fill {
+  justify-content: space-between;
+  gap: 0;
+  box-sizing: border-box;
+}
+
+.detail-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-meta-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #999;
+  letter-spacing: 0.08em;
+}
+:root.dark-nav .detail-meta-label { color: #B8B8BD; }
+
+/* Text-section body default: desktop 17px / tablet 15px / mobile 14px —
+   same tiered convention as .detail-section-text-body p etc. */
+.detail-meta-value { font-size: 17px; color: var(--overview-text-color, #111); }
+/* Dimmed relative to the overview title/body (still full --overview-text-color)
+   so TEAM/DURATION/ROLE reads as secondary metadata rather than pure white. */
+:root.dark-nav .detail-meta-value { color: #B8B8BD; }
+@media (min-width: 601px) and (max-width: 1024px) {
+  .detail-meta-value { font-size: 15px; }
+}
+@media (max-width: 600px) {
+  .detail-meta-value { font-size: 14px; }
+}
+
+/* ───── Detail Sections ───── */
+.detail-sections { padding: 0; }
+
+.detail-others { padding: 60px 40px 60px var(--gutter); }
+
+.detail-others h2 {
+  font-size: var(--others-title-size, 24px);
+  font-weight: var(--others-title-weight, 500);
+  margin-bottom: var(--others-title-gap, 32px);
+}
+
+/* ".Other Projects/Originals" icon row — separate size/gap knobs from the
+   category-hero carousel, set globally (siteConfig.othersIconSize etc.,
+   resolved per tier in JS) since this list appears on every detail page. */
+.detail-others .icon-carousel-track { gap: var(--others-icon-gap, 12px); }
+
+.detail-footnote {
+  padding: 24px var(--gutter) 40px;
+  border-top: 1px solid #e0e0e0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #888;
+}
+.detail-footnote p { margin: 0; }
+
+/* ───── Detail Block ───── */
+.detail-section-imagetext {
+  padding: 80px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+}
+
+.detail-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+  padding: 80px 40px;
+}
+
+.detail-block-imgs {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-block-body {
+  text-align: center;
+  max-width: 700px;
+}
+
+.detail-block-body h2 { font-size: 28px; font-weight: 600; margin-bottom: 12px; color: #111; }
+
+.detail-block-body h4 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: #555; }
+
+.detail-block-body p { font-size: 14px; font-weight: 500; line-height: 1.8; color: #777; }
+
+.detail-hover-img {
+  width: 100%;
+  aspect-ratio: 16/9;
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+/* ───── Blog Post ───── */
+.blog-post-hero { height: 400px; background: #e6e6e6; }
+
+.blog-post-content { padding: 60px 40px; max-width: 800px; margin: 0 auto; }
+
+.blog-post-header { margin-bottom: 40px; }
+
+.blog-post-header h1 { font-size: 32px; font-weight: 500; margin: 12px 0; }
+
+.blog-post-body { font-size: 15px; line-height: 1.9; color: #333; }
+
+.blog-post-nav { padding: 40px; }
+
+.blog-post-nav a { font-size: 14px; color: #555; text-decoration: none; }
+
+
+/* ───── Block Carousel ───── */
+.detail-block-carousel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.detail-carousel-nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.detail-carousel-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #111;
+  padding: 8px 16px;
+  transition: opacity 0.2s;
+}
+
+.detail-carousel-btn:hover { opacity: 0.4; }
+
+.detail-carousel-indicator {
+  font-size: 13px;
+  color: #999;
+}
+
+/* ───── Block Carousel ───── */
+
+.bc-nav {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 0 var(--gutter);
+  box-sizing: border-box;
+}
+
+.bc-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #ececec;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+  transition: background 0.2s, color 0.2s;
+}
+
+.bc-btn:hover:not(:disabled) { background: #ddd; color: #111; }
+
+.bc-btn:disabled { background: #f2f2f2; color: #ccc; cursor: default; }
+
+:root.dark-nav .bc-btn { background: #2a2a2c; color: #ccc; }
+:root.dark-nav .bc-btn:hover:not(:disabled) { background: #3a3a3c; color: #f0f0f0; }
+:root.dark-nav .bc-btn:disabled { background: #232325; color: #555; }
+
+/* ───── Block Carousel ───── */
+.bc-wrap {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.bc-track {
+  display: flex;
+  gap: 24px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 var(--gutter) 32px var(--gutter);
+  scrollbar-width: none;
+}
+
+.bc-track::-webkit-scrollbar { display: none; }
+
+.bc-card {
+  flex: 0 0 70%;
+  scroll-snap-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-right: 24px;
+}
+
+/* Desktop's multi-card view (several cards visible at once, fixed left
+   gutter via .bc-track's padding-left) wants each "next" to land a card
+   flush at that same left edge — center-snap (fine for the single-card
+   mobile-style peek carousel, symmetric padding both sides) instead pulls
+   whatever card is nearest the middle of the viewport, which doesn't line
+   up with the fixed gutter and left a random sliver of the previous card
+   showing at the edge after scrolling. */
+@media (min-width: 769px) {
+  .bc-card { scroll-snap-align: start; }
+}
+
+.bc-card-img {
+  width: 100%;
+  background: transparent;
+  border-radius: 16px;
+  overflow: hidden;
+  aspect-ratio: 16/9;
+  position: relative;
+}
+
+.bc-card-img .detail-hover-img {
+  border-radius: 16px;
+  aspect-ratio: 16/9;
+}
+
+.bc-card-img--square,
+.bc-card-img--square .detail-hover-img {
+  border-radius: 0;
+}
+
+.bc-card-body {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #555;
+  width: 100%;
+  max-width: 480px;
+}
+
+.bc-card-body strong {
+  color: #111;
+  font-weight: 600;
+}
+
+.bc-card-sub {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+}
+
+/* ───── Click-to-reveal (carousel / image+text blocks) ───── */
+.bc-expand-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(30, 30, 32, 0.75);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.bc-expand-btn:hover { background: rgba(30, 30, 32, 0.92); }
+
+.bc-expand-btn--open { transform: rotate(45deg); }
+
+.bc-reveal-text {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--bc-reveal-bg, #f5f5f7);
+  box-sizing: border-box;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  overflow: auto;
+}
+
+.bc-reveal-text h3 { font-size: 17px; font-weight: 600; color: #111; margin: 0; }
+.bc-reveal-text p { font-size: 14px; line-height: 1.6; color: #555; margin: 0; }
+
+/* ───── Editor ───── */
+.editor-wrap {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.editor-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  border-right: 1px solid #eee;
+  overflow-y: auto;
+  padding: 16px 0;
+  background: #fafafa;
+}
+
+.editor-sidebar-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #999;
+  letter-spacing: 0.08em;
+  padding: 0 16px 12px;
+  text-transform: uppercase;
+}
+
+.editor-proj-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: background 0.15s;
+}
+
+.editor-proj-item:hover { background: #f0f0f0; }
+.editor-proj-item.active { background: #111; color: #fff; }
+
+.editor-proj-cat {
+  font-size: 10px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.editor-proj-item.active .editor-proj-cat { color: #aaa; }
+
+.editor-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 40px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.editor-empty {
+  color: #999;
+  font-size: 14px;
+  margin: auto;
+}
+
+.editor-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111;
+}
+
+.editor-save-btn {
+  background: #111;
+  color: #fff;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.editor-save-btn:hover { background: #333; }
+
+.editor-card {
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #fff;
+}
+
+.editor-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.editor-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.editor-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 160px;
+}
+
+.editor-field label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.editor-field input,
+.editor-field textarea,
+.editor-field select {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #111;
+  background: #fafafa;
+  outline: none;
+  transition: border 0.15s;
+  resize: vertical;
+}
+
+.editor-field input:focus,
+.editor-field textarea:focus,
+.editor-field select:focus {
+  border-color: #111;
+  background: #fff;
+}
+
+.editor-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.editor-block {
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #fafafa;
+}
+
+.editor-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+}
+
+.editor-remove-btn {
+  background: none;
+  border: none;
+  color: #bbb;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+
+.editor-remove-btn:hover { color: #e00; }
+
+.editor-add-btn {
+  background: none;
+  border: 1px dashed #ccc;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.15s;
+  align-self: flex-start;
+}
+
+.editor-add-btn:hover { border-color: #111; color: #111; }
+
+.editor-add-section {
+  align-self: flex-start;
+}
+
+.editor-img-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.editor-img-thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.editor-img-thumb img {
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #eee;
+}
+
+.editor-img-thumb span {
+  font-size: 10px;
+  color: #999;
+}
+
+.editor-img-name { font-size: 10px; color: #999; }
+.editor-img-size { font-size: 10px; color: #bbb; }
+.editor-display-info { font-size: 12px; color: #aaa; padding: 4px 0; }
+
+/* ───── Scroll reveal (detail pages) ─────
+   Animate direct children only, not the section itself, so a section's own
+   background-color/image (set inline on the <section>) appears immediately
+   while its content fades + slides in. */
+.project-detail > section.detail-section-full > *,
+.project-detail > section.detail-section-mid > *,
+.project-detail > section.detail-section-carousel > * {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 1.1s cubic-bezier(0.22, 0.61, 0.36, 1), transform 1.1s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.project-detail > section.revealed > * {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-detail > section > * {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* ───── Section Types ───── */
+/* Offset anchor scroll so TOC jumps land below the sticky navbar + detail-nav.
+   57.5px is detail-nav's own height (fixed — its padding/font don't change),
+   navbar's varies with navFontSize/navIconSize, hence the var. */
+.detail-overview,
+.detail-section-full,
+.detail-section-mid,
+.detail-section-carousel,
+.scroll-anim-section {
+  scroll-margin-top: calc(var(--navbar-h, 44.5px) + 57.5px);
+}
+
+.detail-section-full { padding: 0; }
+/* Breaks the image out of body's max-width:1920px cap to the true viewport
+   edge on wide screens, without affecting aspect-ratio (set on the img wrap,
+   independent of this section's width). Skipped when matchTextPadding keeps
+   the image aligned to the 22% text gutter instead. */
+.detail-section-full:not(.detail-section-full--padded) {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+/* 22% desktop / 20px mobile / 6% tablet on plain pages — same 3-tier
+   pattern as .match-text-pad. Category-listing pages (.cat-sections) stay
+   at 22% through the whole 601-1024 range instead; see the reclaim rule in
+   the "Tablet: follow desktop's page-edge padding" block further down. */
+.detail-section-full--padded { padding: 0 var(--gutter); box-sizing: border-box; }
+@media (max-width: 600px) {
+  .detail-section-full--padded { padding: 0 20px; }
+}
+@media (min-width: 601px) and (max-width: 768px) {
+  .detail-section-full--padded { padding: 0 6%; }
+}
+.detail-section-mid {
+  padding: 80px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 80px;
+}
+
+.detail-section-mid--padded { padding-left: var(--gutter); padding-right: var(--gutter); box-sizing: border-box; }
+@media (max-width: 768px) {
+  .detail-section-mid--padded { padding-left: 20px; padding-right: 20px; }
+}
+
+.detail-section-mid--grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+  gap: var(--row-gap, 60px) var(--col-gap, 40px);
+  padding-left: var(--grid-pad, var(--gutter));
+  padding-right: var(--grid-pad, var(--gutter));
+  box-sizing: border-box;
+}
+.detail-section-mid--grid .detail-block-mid {
+  align-items: flex-start;
+  gap: var(--img-gap, 20px);
+  min-width: 0;
+}
+.detail-section-mid--grid .detail-block-mid-img {
+  width: var(--img-width, 100%);
+}
+.detail-section-mid--grid .detail-block-mid-body {
+  text-align: left;
+  max-width: none;
+}
+
+/* Justified rows (differing image ratios + Fixed Card Height): swap the grid
+   for flex so column widths follow each block's own flex-grow ratio instead
+   of a fixed fraction — see isJustified in ProjectDetail.jsx/OriginalDetail.jsx.
+   The flex row lives in its own .detail-blocks-row wrapper rather than on the
+   section itself, so a shared caption below it (grid-column:1/-1 in the grid
+   path) sits as a plain sibling instead of a flex item — as a flex item with
+   flex-basis:100%, it consumed the row's entire hypothetical main size on its
+   own line, leaving zero free space for the image items' flex-grow to
+   distribute (every column collapsed to 0 width instead of showing anything).
+   CSS Grid doesn't have that failure mode, hence only this path needs it. */
+.detail-section-mid--grid.detail-section-mid--justified {
+  display: block;
+}
+.detail-blocks-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--row-gap, 60px) var(--col-gap, 40px);
+}
+.detail-section-mid--justified .detail-block-mid-img {
+  width: 100%;
+}
+.detail-section-mid--justified .detail-block-mid-body--shared {
+  margin-top: var(--row-gap, 60px);
+}
+
+@media (max-width: 768px) {
+  .detail-section-mid--grid {
+    grid-template-columns: 1fr;
+    padding-left: 20px;
+    padding-right: 20px;
+    gap: 40px;
+  }
+}
+
+.detail-block-mid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+
+.detail-block-mid-img {
+  overflow: visible;
+  width: 100%;
+  position: relative;
+}
+
+.detail-block-mid-img .detail-hover-img {
+  aspect-ratio: 16/9;
+}
+.detail-block-mid-img.fixed-h {
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+.detail-block-mid-img.fixed-h .detail-hover-img {
+  aspect-ratio: unset;
+  height: 100%;
+}
+
+.detail-block-mid-body {
+  text-align: inherit;
+  width: 100%;
+  max-width: 560px;
+}
+
+/* ── Icon-row layout (small round icon left, text right) — used for
+   resume-style entries, e.g. About "Experiences" ── */
+.detail-section-mid--icon-list {
+  gap: 32px;
+}
+
+.detail-section-mid--icon-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--icon-cols, 2), 1fr);
+  column-gap: 40px;
+  row-gap: 32px;
+}
+@media (max-width: 768px) {
+  .detail-section-mid--icon-grid { display: flex; flex-direction: column; }
+}
+
+.detail-show-more-btn {
+  align-self: center;
+  margin-top: 8px;
+  padding: 10px 24px;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  background: none;
+  color: #111;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+.detail-show-more-btn:hover {
+  background: #f5f5f5;
+  border-color: #ccc;
+}
+.detail-block-mid--icon-row {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--icon-gap, 20px);
+  width: 100%;
+}
+.detail-block-mid--icon-row .detail-block-mid-img {
+  width: var(--icon-size, 56px);
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+}
+@media (min-width: 601px) and (max-width: 1024px) {
+  .detail-block-mid--icon-row .detail-block-mid-img { width: var(--icon-size-tablet, var(--icon-size, 56px)); }
+  .detail-block-mid--icon-row { gap: var(--icon-gap-tablet, var(--icon-gap, 20px)); }
+}
+@media (max-width: 600px) {
+  .detail-block-mid--icon-row .detail-block-mid-img { width: var(--icon-size-mobile, var(--icon-size, 44px)); }
+  .detail-block-mid--icon-row { gap: var(--icon-gap-mobile, var(--icon-gap, 20px)); }
+}
+.detail-block-mid--icon-row .detail-block-mid-img .detail-hover-img {
+  aspect-ratio: 1/1;
+}
+.detail-block-mid--icon-row .detail-block-mid-body {
+  text-align: left;
+  max-width: none;
+  flex: 1;
+}
+.detail-block-mid--icon-row .detail-block-mid-body h2 { font-size: 17px; margin-bottom: 4px; }
+.detail-block-mid--icon-row .detail-block-mid-body h4 { font-size: 13px; margin-bottom: 4px; }
+.detail-block-mid--icon-row .detail-block-mid-body p  { font-size: 14px; }
+
+.detail-block-title-row { margin-bottom: 4px; }
+.detail-block-title-row h2 { margin-bottom: 0 !important; }
+
+.detail-block-link-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: #eee;
+  color: #555;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.detail-block-mid:hover .detail-block-link-icon { opacity: 1; }
+
+/* ── Text-section link preview (chip / OG card) ── */
+.detail-link-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 6px 12px 6px 6px;
+  border-radius: 999px;
+  background: #f2f2f2;
+  color: #444;
+  font-size: 13px;
+  font-weight: 500;
+}
+.detail-link-chip .detail-block-link-icon { opacity: 1; background: #fff; }
+
+/* Wraps a linked line's text + its preview (chip/OG card). display:flex by
+   default so it stacks full-width like a normal block; on wider screens it
+   switches to inline-flex so consecutive linked lines sit side by side and
+   wrap onto new rows instead of stacking straight down. */
+.detail-link-preview-wrap {
+  display: flex;
+  flex-direction: column;
+}
+@media (min-width: 769px) {
+  .detail-link-preview-wrap {
+    display: inline-flex;
+    vertical-align: top;
+    width: 320px;
+    margin-right: 16px;
+  }
+}
+
+/* Used when the parent is a real flex-wrap row (text sections, e.g. Media /
+   Press): a stacked list of horizontal news cards, image on the left. */
+.detail-link-preview-row-item {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.detail-link-preview-row {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 16px;
+  row-gap: 12px;
+}
+.detail-link-preview-row .detail-link-og-card { flex-direction: row; max-width: 100%; }
+.detail-link-preview-row .detail-link-og-image { width: calc(240px * var(--og-card-scale, 1)); aspect-ratio: auto; }
+
+@media (max-width: 768px) {
+  .detail-link-preview-row .detail-link-og-image { width: calc(130px * var(--og-card-scale, 1)); }
+}
+
+.detail-link-og-card {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin-top: 16px;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  overflow: hidden;
+  max-width: calc(420px * var(--og-card-scale, 1));
+}
+.detail-link-og-image { width: 100%; aspect-ratio: 1.91/1; overflow: hidden; background: #e6e6e6; flex-shrink: 0; }
+.detail-link-og-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.detail-link-og-body { padding: calc(12px * var(--og-card-scale, 1)) calc(14px * var(--og-card-scale, 1)); display: flex; flex-direction: column; flex: 1; gap: 4px; }
+.detail-link-og-title {
+  font-size: calc(14px * var(--og-card-scale, 1)); font-weight: 600; color: #111; margin: 0; line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  min-height: calc(1.35em * 2);
+}
+.detail-link-og-desc {
+  font-size: calc(13px * var(--og-card-scale, 1)); color: #666; margin: 0; line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  min-height: calc(1.45em * 2);
+}
+.detail-link-og-site { font-size: calc(12px * var(--og-card-scale, 1)); color: #999; margin: auto 0 0; padding-top: 2px; text-transform: uppercase; letter-spacing: 0.03em; }
+
+.detail-block-mid-body--shared {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.detail-section-text-body {
+  padding: 0 var(--gutter);
+  box-sizing: border-box;
+}
+.detail-section-text-body h2 { font-size: 28px; font-weight: 600; margin-bottom: 12px; color: #111; }
+
+.detail-text-link {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 12px 24px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.detail-text-link:hover { opacity: 0.8; }
+.detail-text-link--text {
+  display: inline;
+  margin-top: 0;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: #0070f3;
+  font-weight: 500;
+  text-decoration: underline;
+}
+.detail-text-link--text:hover { opacity: 1; color: #005bc9; }
+
+/* ── Stats ─────────────────────────────────────────────────── */
+.detail-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 60px;
+  padding: 80px var(--gutter);
+  box-sizing: border-box;
+}
+.detail-stats-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  min-width: 120px;
+}
+.detail-stats-icon { width: 32px; height: 32px; object-fit: contain; margin-bottom: 4px; }
+.detail-stats-value { font-size: 40px; font-weight: 700; color: var(--overview-text-color, #111); line-height: 1.1; }
+.detail-stats-label { font-size: 14px; color: #86868D; }
+
+@media (max-width: 768px) {
+  .detail-stats { gap: 32px; padding: 60px 20px; }
+  .detail-stats-value { font-size: 32px; }
+}
+
+.detail-block-mid-body h2 { font-size: 24px; font-weight: 600; margin-bottom: 12px; color: #111; }
+.detail-block-mid-body h4 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: #555; }
+.detail-block-mid-body p  { font-size: 17px; font-weight: 500; line-height: 1.45; color: #86868D; }
+/* Text-section body default: desktop 17px / tablet (601-1024) 15px /
+   mobile (<=600) 14px — see the matching @media blocks below. */
+.detail-section-text-body p { font-size: 17px; font-weight: 500; line-height: 1.45; color: #86868D; }
+@media (min-width: 601px) and (max-width: 1024px) {
+  .detail-section-text-body p { font-size: 15px; }
+}
+@media (max-width: 600px) {
+  .detail-section-text-body p { font-size: 14px; }
+}
+
+/* "Row (3 cols)" text line — up to 3 short items laid out side by side
+   under an image, evenly split (e.g. Team A | Team B | Team C). */
+.detail-line-row { display: flex; gap: 24px; color: #86868D; }
+.detail-line-row span { flex: 1; min-width: 0; }
+
+@media (max-width: 768px) {
+  .detail-line-row { flex-wrap: wrap; gap: 12px 24px; }
+  .detail-line-row span { flex: 1 1 auto; }
+}
+
+.detail-section-carousel { padding: 80px 0; }
+
+/* ───── Annotation ───── */
+.annotated-img-wrap {
+  width: 100%;
+  aspect-ratio: 16/9;
+  position: relative;
+  overflow: visible;
+  border-radius: 12px;
+}
+
+/* ───── Annotation Editor ───── */
+.editor-annotation-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #eee;
+}
+
+.editor-annotation-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.editor-ann-img-wrap {
+  position: relative;
+  cursor: default;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #eee;
+}
+
+.editor-ann-img-wrap.placing {
+  cursor: crosshair;
+  border-color: #4a90e2;
+}
+
+.editor-ann-placing-hint {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.editor-ann-dot-preview {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4a90e2;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.editor-ann-label-preview {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4a90e2;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.editor-ann-item {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #fff;
+}
+
+.editor-ann-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+}
+
+.editor-ann-place-btn {
+  background: #f0f0f0;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.editor-ann-place-btn:hover { background: #e0e0e0; }
+
+/* ───── Annotation (updated) ───── */
+.ann-dot { display: none; }
+
+.ann-svg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 1;
+}
+
+.ann-label {
+  position: absolute;
+  transform: translateY(-50%);
+  max-width: 220px;
+  opacity: 0;
+  transition: opacity 0.25s;
+  z-index: 3;
+  pointer-events: all;
+  cursor: default;
+}
+
+.ann-label.active { opacity: 1; }
+
+.ann-label-left { text-align: right; }
+.ann-label-right { text-align: left; }
+
+.ann-label-icon {
+  display: block;
+  width: auto;
+  height: 80px;
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
+.ann-label-left .ann-label-icon { margin-left: auto; }
+.ann-label-right .ann-label-icon { margin-right: auto; }
+
+.ann-label-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+
+.ann-label-content {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #888;
+}
+
+.editor-ann-place-btn.active {
+  background: #4a90e2;
+  color: #fff;
+}
+
+.editor-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 10;
+  padding: 32px 0 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+/* ───── Full Image Overlay ───── */
+.detail-full-img-wrap {
+  position: relative;
+  display: block;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+  background: #e6e6e6;
+}
+.detail-full-img-wrap img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detail-full-overlay {
+  position: absolute;
+  bottom: 10%;
+  max-width: 320px;
+  color: #fff;
+}
+
+/* 22% matches the left margin every other text block on the page uses
+   (.detail-section-text-body { padding: 0 22% }) — was 6%, which made this
+   caption start noticeably closer to the edge than any other section's text.
+   A plain `22%` isn't equivalent to that anymore now that .detail-hero
+   breaks out to full viewport width (100vw): 22% of a 100vw container drifts
+   away from 22% of everyone else's *1920px-capped* container as soon as the
+   window exceeds 1920px. calc()+min()/max() reconstructs the same capped
+   width this overlay's own box no longer has, so its gutter tracks the rest
+   of the page's at any viewport size instead of just matching it ≤1920px. */
+.detail-full-overlay-left { left: calc(max(0px, (100vw - 1920px) / 2) + var(--gutter-k) * min(100vw, 1920px)); text-align: left; }
+.detail-full-overlay-center { left: 50%; transform: translateX(-50%); text-align: center; }
+.detail-full-overlay-right { right: calc(max(0px, (100vw - 1920px) / 2) + var(--gutter-k) * min(100vw, 1920px)); text-align: right; }
+
+.detail-full-overlay-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #fff;
+}
+
+.detail-full-overlay-subtitle {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: rgba(255,255,255,0.7);
+}
+
+.detail-full-overlay-content {
+  font-size: 13px;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.8);
+}
+
+/* Defaults for the lines-based editor path (TextLinesEditor / renderLines) —
+   that renderer emits bare h2/h4/p with no className, so give them the same
+   legible-on-photo defaults the legacy title/subtitle/content classes had.
+   A line's own color/size (set per-line in the editor) overrides these via
+   inline style, same as everywhere else renderLines is used. */
+.detail-full-overlay h2 { font-size: 22px; font-weight: 600; margin-bottom: 8px; color: #fff; }
+.detail-full-overlay h4 { font-size: 13px; font-weight: 500; margin-bottom: 8px; color: rgba(255,255,255,0.7); }
+.detail-full-overlay p  { font-size: 13px; line-height: 1.7; color: rgba(255,255,255,0.8); }
+
+.editor-overlay-wrap {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed #eee;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ───── Scroll Animation Section ───── */
+
+/* ───── Scroll Animation Section ───── */
+.scroll-anim-section {
+  position: relative;
+}
+
+.scroll-anim-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  gap: 60px;
+  padding: 0 max(60px, calc((100% - 1400px) / 2));
+  background: #fff;
+  box-sizing: border-box;
+}
+
+/* Desktop pages land TOC/anchor jumps just below the sticky navbar +
+   detail-nav (~94px, see .detail-section-mid's scroll-margin-top above).
+   Since this section's own content is ALSO sticky, pinning it to the true
+   viewport top (0) means it doesn't "catch up" until the container has
+   scrolled 94px further past that landing spot — which reads as a big
+   empty gap under the title on first arrival. Matching the sticky top to
+   that same offset makes it pin immediately, flush under the bars. */
+@media (min-width: 601px) {
+  .scroll-anim-sticky {
+    top: calc(var(--navbar-h, 44.5px) + 49.5px);
+    height: calc(100vh - (var(--navbar-h, 44.5px) + 49.5px));
+  }
+}
+
+/* canvas left (default) */
+.scroll-anim-sticky--canvas-left {
+  flex-direction: row;
+}
+
+/* canvas right */
+.scroll-anim-sticky--canvas-right {
+  flex-direction: row-reverse;
+}
+.scroll-anim-sticky--canvas-right .scroll-anim-text {
+  margin-right: 0;
+  margin-left: 80px;
+}
+
+/* canvas center — stacked vertically */
+.scroll-anim-sticky--canvas-center {
+  flex-direction: column;
+  justify-content: center;
+  gap: 32px;
+}
+.scroll-anim-sticky--canvas-center .scroll-anim-canvas-wrap {
+  flex: none;
+  width: 70%;
+  max-width: 640px;
+}
+.scroll-anim-sticky--canvas-center .scroll-anim-text {
+  width: 70%;
+  max-width: 640px;
+  margin: 0;
+}
+
+.scroll-anim-canvas-wrap {
+  flex: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Safety ceiling only — sizes itself from flex-grow width (row layout)
+     or the center-layout override below as before. The old bug was this
+     box having no upper bound at all: a near-square ratio computed from
+     a wide flex-grown width could demand far more height than the sticky
+     panel had, and with nothing to clip it, the excess silently painted
+     over whichever section sat next to it, eating clicks meant for that
+     section's own content. This caps it without forcing either axis. */
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.scroll-anim-canvas {
+  width: 100%;
+  height: 100%;
+  /* Belt-and-suspenders: if the wrap's box and the frame's true ratio
+     ever drift apart (e.g. a stale canvasCrop.imgRatio), contain — not
+     stretch-to-fill — is the safe failure mode. */
+  object-fit: contain;
+  display: block;
+}
+
+.scroll-anim-text {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-right: 80px;
+}
+
+/* text position (text-align within the text box) */
+.scroll-anim-text--left  { text-align: left; align-items: flex-start; }
+.scroll-anim-text--center { text-align: center; align-items: center; }
+.scroll-anim-text--right  { text-align: right; align-items: flex-end; }
+
+.scroll-anim-text h2 {
+  font-size: 21px;
+  font-weight: 600;
+  color: #111;
+}
+
+.scroll-anim-text h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #999;
+}
+
+.scroll-anim-text p {
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #555;
+}
+
+/* ───── Scroll Anim Side Items ───── */
+.scroll-anim-side-items {
+  /* Caps at 45% of the sticky row so the canvas image (flex:3, taking
+     whatever's left) doesn't get squeezed to near-nothing at tablet widths,
+     where 280px is a much bigger bite out of the available row than it is
+     on desktop. */
+  width: min(280px, 45%);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  margin-right: 60px;
+  max-height: calc(100vh - 52px);
+  overflow-y: auto;
+  padding: 48px 0;
+  box-sizing: border-box;
+  scrollbar-width: none;
+}
+.scroll-anim-side-items::-webkit-scrollbar { display: none; }
+
+.scroll-anim-sticky--canvas-right .scroll-anim-side-items {
+  margin-right: 0;
+  margin-left: 60px;
+}
+
+.scroll-anim-side-item { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+
+.scroll-anim-side-item-img {
+  width: 100%;
+  max-height: 120px;
+  object-fit: contain;
+  object-position: left center;
+  margin-bottom: 4px;
+}
+
+/* Mobile "static" layout: no scroll-scrub, no sticky pin — the final frame
+   and side items/text just stack normally in document flow. */
+.scroll-anim-static {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  gap: 28px;
+  box-sizing: border-box;
+}
+
+.scroll-anim-static-canvas-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.scroll-anim-static-items {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+}
+
+.scroll-anim-below-text {
+  padding: 8px max(60px, calc((100% - 1400px) / 2)) 80px;
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.scroll-anim-below-text .scroll-anim-text {
+  width: auto;
+  flex-shrink: 1;
+}
+
+.scroll-anim-side-item-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.scroll-anim-side-item-subtitle {
+  font-size: 17px;
+  color: #888;
+  line-height: 1.5;
+}
+
+/* ───── Feature Tabs Section ───── */
+.detail-feature-tabs {
+  padding: 60px max(60px, calc((100% - 1400px) / 2));
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.detail-feature-tabs-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+
+.detail-feature-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  border: none;
+  background: #f5f5f7;
+  cursor: pointer;
+  min-width: 80px;
+  max-width: 140px;
+  flex: 1;
+  transition: background 0.2s;
+}
+
+.detail-feature-tab--active {
+  background: #1d1d1f;
+}
+
+.detail-feature-tab-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.detail-feature-tab--active .detail-feature-tab-icon {
+  filter: invert(1);
+}
+
+.detail-feature-tab-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1d1d1f;
+  text-align: center;
+  line-height: 1.3;
+  word-break: keep-all;
+}
+
+.detail-feature-tab--active .detail-feature-tab-label {
+  color: #fff;
+}
+
+.detail-feature-tabs-content {
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.detail-feature-tabs-img-wrap {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+  position: relative;
+  aspect-ratio: 16/9;
+}
+
+.detail-feature-tabs-content p {
+  font-size: 15px;
+  font-weight: 500;
+  color: #555;
+  line-height: 1.7;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .detail-feature-tabs {
+    padding: 40px 20px;
+  }
+  .detail-feature-tab {
+    min-width: 64px;
+    max-width: 100px;
+    padding: 12px 12px;
+  }
+  .detail-feature-tab-label {
+    font-size: 11px;
+  }
+}
+
+/* ───── Scroll Anim Mobile Tabs ───── */
+/* Scoped to 768px (this section's own `isCompact`, not tier's 600px mobile
+   boundary) — a fixed-width side text column only really works once there's
+   real desktop width to split from the canvas; at tablet widths (601-768)
+   it eats too much of the row and squeezes the canvas down to near-nothing,
+   so tablet gets this same stacked canvas-on-top + tabs-below treatment as
+   mobile instead of the side-by-side desktop layout. */
+.scroll-anim-tabs {
+  display: none;
+}
+@media (max-width: 768px) {
+  .scroll-anim-tabs {
+    display: block;
+    padding: 24px 20px 40px;
+    background: #fff;
+  }
+  .scroll-anim-tabs-bar {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .scroll-anim-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: none;
+    background: #f5f5f7;
+    cursor: pointer;
+    flex: 1;
+    min-width: 64px;
+    max-width: 100px;
+    transition: background 0.2s;
+    text-align: center;
+  }
+  .scroll-anim-tab--active {
+    background: #1d1d1f;
+  }
+  .scroll-anim-tab-icon {
+    display: none;
+  }
+  .scroll-anim-tab--active .scroll-anim-tab-icon {
+    filter: invert(1);
+  }
+  .scroll-anim-tab-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: #1d1d1f;
+    text-align: center;
+    line-height: 1.3;
+    word-break: keep-all;
+  }
+  .scroll-anim-tab--active .scroll-anim-tab-label {
+    color: #fff;
+  }
+  .scroll-anim-tab-content {
+    text-align: center;
+    padding: 0 16px;
+  }
+  .scroll-anim-tab-content p {
+    font-size: 14px;
+    color: #555;
+    line-height: 1.7;
+    margin: 0;
+  }
+}
+
+/* Same 768px boundary as the tabs block above (this section's `isCompact`). */
+@media (max-width: 768px) {
+  .scroll-anim-sticky,
+  .scroll-anim-sticky--canvas-left,
+  .scroll-anim-sticky--canvas-right,
+  .scroll-anim-sticky--canvas-center {
+    flex-direction: column;
+    padding: 20px;
+    gap: 24px;
+    height: auto;
+    min-height: 100svh;
+    justify-content: center;
+  }
+
+  .scroll-anim-sticky--canvas-center .scroll-anim-canvas-wrap,
+  .scroll-anim-canvas-wrap {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .scroll-anim-text,
+  .scroll-anim-sticky--canvas-right .scroll-anim-text,
+  .scroll-anim-sticky--canvas-center .scroll-anim-text {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+  }
+
+  .scroll-anim-side-items,
+  .scroll-anim-sticky--canvas-right .scroll-anim-side-items {
+    display: none;
+  }
+
+  .scroll-anim-side-item-title { font-size: 18px; }
+  .scroll-anim-side-item-subtitle { font-size: 13px; }
+
+  .scroll-anim-below-text { padding: 40px 20px 0; }
+}
+
+/* ───── Mobile Filter Bar ───── */
+.filter-bar-desktop { display: flex; }
+.filter-bar-mobile  { display: none; }
+
+/* Entry highlight: flash blue briefly, then settle to the gray/black steady state */
+@keyframes mobileFilterIntroFlash {
+  0%, 38%  { background: #0087ED; color: #fff; }
+  100%     { background: #f5f5f7; color: #111; }
+}
+
+@media (max-width: 768px) {
+  .home-hero { height: 80vw; }
+  .filter-bar-desktop { display: none; }
+  .filter-bar-mobile  { display: flex; padding: 0; }
+
+  .mobile-filter-bar {
+    position: relative;
+    width: 100%;
+  }
+
+  .mobile-filter-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 20px;
+    height: 44px;
+    background: #f5f5f7;
+    border: none;
+    border-bottom: 1px solid #e2e2e2;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    color: #111;
+    /* Brief blue highlight on page entry, then settle to gray */
+    animation: mobileFilterIntroFlash 1.2s ease both;
+  }
+
+  .mobile-filter-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Text follows the trigger's (animated) color; opacity gives the muted hierarchy in both states */
+  .mobile-filter-parent  { color: inherit; opacity: 0.5; }
+  .mobile-filter-sep     { color: inherit; opacity: 0.35; font-size: 12px; }
+  .mobile-filter-current { color: inherit; font-weight: 500; }
+
+  .mobile-filter-chevron {
+    color: inherit;
+    opacity: 0.55;
+    font-size: 16px;
+    display: inline-block;
+    transition: transform 0.2s ease;
+    transform: rotate(90deg);
+  }
+
+  .mobile-filter-chevron.open {
+    transform: rotate(-90deg);
+  }
+
+  .mobile-filter-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #f5f5f7;
+    border-bottom: 1px solid #e2e2e2;
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    z-index: 200;
+  }
+
+  .mobile-filter-option {
+    display: block;
+    width: 100%;
+    padding: 13px 20px;
+    text-align: left;
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 15px;
+    color: #555;
+    cursor: pointer;
+  }
+
+  .mobile-filter-option.active {
+    color: #111;
+    font-weight: 600;
+  }
+
+  .mobile-filter-option:active {
+    background: rgba(0,0,0,0.05);
+  }
+
+  .filter-bar-mobile.filter-bar-fixed {
+    position: sticky;
+    top: var(--navbar-h, 44.5px);
+    left: 0;
+    transform: none;
+    border-radius: 0;
+    padding: 0;
+    background: #0087ED;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    gap: 0;
+    width: 100%;
+  }
+
+  body {
+    min-width: 320px;
+  }
+}
+
+/* ───── Hamburger ───── */
+.navbar-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.hamburger-icon {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 20px;
+}
+
+.hamburger-icon span {
+  display: block;
+  height: 1.5px;
+  background: var(--navbar-text-override, #111);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+  transform-origin: center;
+}
+
+.hamburger-icon.open span:nth-child(1) {
+  transform: translateY(6.5px) rotate(45deg);
+}
+
+.hamburger-icon.open span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger-icon.open span:nth-child(3) {
+  transform: translateY(-6.5px) rotate(-45deg);
+}
+
+/* ───── Mobile Overlay ───── */
+.navbar-mobile-overlay {
+  position: fixed;
+  inset: 0;
+  top: 53px;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 99;
+  display: flex;
+  align-items: flex-start;
+  padding: 40px;
+}
+
+.navbar-mobile-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.navbar-mobile-links a {
+  font-size: 32px;
+  font-weight: 500;
+  color: #111;
+  text-decoration: none;
+}
+
+.navbar-mobile-links a.active { color: #555; }
+
+@media (max-width: 600px) {
+  .navbar-links { display: none; }
+  .navbar-search { display: none; }
+  .navbar-hamburger { display: flex; }
+  .navbar { padding: 10px 20px; }
+}
+
+/* Tablet (601–768px) keeps the full desktop navbar (horizontal links, search
+   icon, no hamburger) instead of falling back to mobile — just with tighter
+   gaps/padding than desktop so the 5 links + search still fit comfortably. */
+@media (min-width: 601px) and (max-width: 768px) {
+  .navbar { padding: 10px 6%; }
+  .navbar-right { gap: 20px; }
+  .navbar-links { gap: 20px; }
+}
+
+/* ───── Home Mobile ───── */
+@media (max-width: 768px) {
+  .home-grid-card-overlay .home-full-card-tagline { display: none; }
+
+  .home-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    overflow-x: unset;
+    scroll-snap-type: unset;
+    padding: 0;
+    gap: 0;
+  }
+
+  .home-grid-card {
+    flex: unset;
+    height: auto;
+    min-height: unset;
+    max-height: unset;
+    aspect-ratio: 5 / 4;
+    scroll-snap-align: unset;
+  }
+
+  /* The 2-col/3-col row-filling rule above doesn't apply to mobile's single
+     column — every card stacks and shows here. */
+  .home-grid > .home-grid-card:nth-child(n+3) {
+    display: block;
+  }
+
+  .home-originals { padding: 40px 0 0; }
+
+  .home-originals:not(.home-originals--inset) h2 { padding: 0 20px; }
+
+  .home-originals-slide {
+    aspect-ratio: 5 / 4;
+    border-radius: 0;
+  }
+}
+
+/* ───── Icon Carousel Mobile ───── */
+@media (max-width: 768px) {
+  .projects-category-hero {
+    height: auto;
+    min-height: 200px;
+    padding: 28px 20px 32px;
+    overflow: hidden;
+  }
+
+  .projects-category-hero h2 { margin-top: var(--category-title-top-gap-mobile, var(--category-title-top-gap, 100px)); font-size: var(--category-title-size-mobile, var(--category-title-size, 56px)); }
+
+  .icon-carousel-track { gap: 40px; }
+
+  /* var(--icon-size, ...) lets a category's mobile-tier Icon Size override
+     (set per-category from the editor) win over this default; falls back
+     to 80px, the standard mobile icon size every category currently uses. */
+  .projects-category-icon-item {
+    width: var(--icon-size, 80px);
+  }
+
+  .projects-category-icon-item img,
+  .projects-category-icon-item > div {
+    width: var(--icon-size, 80px) !important;
+    height: var(--icon-size, 80px) !important;
+  }
+
+}
+
+/* ───── Icon Carousel ───── */
+.icon-carousel-wrap {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.icon-carousel-track {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 60px;
+  align-items: flex-start;
+  cursor: grab;
+  user-select: none;
+}
+
+.icon-carousel-track:active { cursor: grabbing; }
+
+/* ───── Icon Item Size ───── */
+/* Sized via --icon-size (set inline from siteConfig.categoryIconSize),
+   falling back to 72px, the standard desktop icon size every category
+   currently uses. */
+.projects-category-icon-item {
+  width: var(--icon-size, 72px);
+  flex-shrink: 0;
+}
+
+.projects-category-icon-item img,
+.projects-category-icon-item > div {
+  width: var(--icon-size, 72px);
+  height: var(--icon-size, 72px);
+  object-fit: contain;
+}
+
+/* .detail-others (the "Other Projects/Originals" list) has its own size
+   knob, independent of whatever --icon-size a category hero page sets. */
+.detail-others .projects-category-icon-item {
+  width: var(--others-icon-size, 200px);
+}
+.detail-others .projects-category-icon-item img,
+.detail-others .projects-category-icon-item > div {
+  width: var(--others-icon-size, 200px);
+  height: var(--others-icon-size, 200px);
+}
+
+/* ───── Mobile Responsive ───── */
+@media (max-width: 768px) {
+  /* Detail Nav — hide "← back", center the title */
+  .detail-nav {
+    padding: 12px 20px;
+    justify-content: center;
+  }
+
+  .detail-nav-back { display: none; }
+
+  .detail-nav-links {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* Detail Overview */
+  .detail-overview {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding: 40px 20px;
+  }
+
+  .detail-overview-text {
+    padding-left: 0;
+    padding-right: 0;
+    font-size: 14px;
+  }
+
+  /* Detail Sections */
+  .detail-section-mid {
+    padding: 40px 0;
+    gap: 40px;
+  }
+
+  .detail-block-mid-body {
+    padding: 0 20px;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* About's sections already carry their own side padding (see the
+     .about .detail-section-mid rules), unlike plain project-detail pages
+     where the section itself has zero side padding and each block supplies
+     its own — so on About specifically this would otherwise double up. */
+  .about .detail-block-mid-body {
+    padding: 0;
+  }
+
+  .detail-section-text-body {
+    padding: 0 20px;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100% !important;
+  }
+
+  .detail-block-mid-body h2 { font-size: 22px; }
+  .detail-block-mid-body h4 { font-size: 13px; }
+  /* Body copy: unified mobile size across all detail-page paragraph
+     variants (see the ~768px query further down for the rest).
+     .detail-section-text-body p's own mobile/tablet sizing now lives in its
+     dedicated tier-based rules above (601-1024 / <=600), so it's not reset
+     here to avoid this max-width:768 query overriding the 601-768 portion
+     of that tablet range back down to the mobile size. */
+  .detail-block-mid-body p  { font-size: 14px; line-height: 1.45; }
+  .scroll-anim-text p { font-size: 14px; line-height: 1.45; }
+
+  /* Match .detail-section-text-body / .detail-block-mid-body's mobile inset —
+     those switch from the desktop 22% margin to a fixed 20px here, but this
+     overlay had no mobile override, so it stayed at 22% — visibly more
+     indented than every other text block on mobile. */
+  .detail-full-overlay-left { left: 20px; }
+  .detail-full-overlay-right { right: 20px; }
+
+  .detail-others { padding: 40px 20px; }
+
+  .icon-carousel-track { gap: 6px; }
+  /* Scoped to .detail-others (the "related projects" list at the bottom of
+     detail pages) — NOT the category hero carousel, which shares this same
+     class but needs --icon-size (set per-category, per-tier from JS) to
+     actually take effect instead of being overridden by this !important. */
+  .detail-others .projects-category-icon-item { width: var(--others-icon-size, 120px); }
+  .detail-others .projects-category-icon-item img,
+  .detail-others .projects-category-icon-item > div { width: var(--others-icon-size, 120px) !important; height: var(--others-icon-size, 120px) !important; }
+
+  /* About */
+  .about-resume {
+    padding: 40px 20px;
+  }
+
+  .about-resume-item {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .about-resume-item-date {
+    position: static;
+  }
+
+  /* Projects */
+  .projects-recent { padding: var(--category-title-top-gap-mobile, var(--category-title-top-gap, 40px)) 20px 40px; }
+  .projects-recent h2 { font-size: var(--category-title-size-mobile, var(--category-title-size, 32px)); margin-bottom: var(--category-title-gap-mobile, var(--category-title-gap, 32px)); }
+
+  .blog-list { padding: var(--blog-title-top-gap-mobile, var(--blog-title-top-gap, 40px)) 20px 40px; }
+  .blog-list h2 { font-size: var(--blog-title-size-mobile, var(--blog-title-size, 24px)); margin-bottom: var(--blog-title-gap-mobile, var(--blog-title-gap, 32px)); }
+
+  .projects-grid-all {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .project-card {
+    aspect-ratio: 5/4;
+  }
+
+  /* Mobile: hide only the orange/blue gradient, but keep the name + description visible (hover-state look) */
+  .project-card-gradient {
+    display: none;
+  }
+
+  .project-card-overlay-title,
+  .project-card-overlay-desc {
+    text-shadow: var(--card-text-shadow, 0 1px 6px rgba(0,0,0,0.6));
+  }
+
+  .projects-show-more {
+    display: block;
+    width: 100%;
+    margin-top: 16px;
+    padding: 14px;
+    background: none;
+    border: 0.5px solid #ccc;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    color: #555;
+    cursor: pointer;
+  }
+
+  /* Detail block */
+  .detail-block {
+    padding: 40px 20px;
+  }
+
+  .detail-hover-img,
+  .bc-card-img,
+  .bc-card-img .detail-hover-img {
+    aspect-ratio: 5/4;
+  }
+
+  .detail-block-mid-img .detail-hover-img {
+    border-radius: 0;
+  }
+
+  .detail-full-img-wrap {
+    aspect-ratio: 5/4;
+    overflow: hidden;
+  }
+
+  .detail-full-img-wrap img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .bc-track {
+    padding: 0 0 32px 20px;
+  }
+
+  .bc-nav { padding: 0 20px; }
+
+  .bc-card { flex: 0 0 85%; }
+
+  .cat-sections .detail-section-mid { padding-left: 20px; padding-right: 20px; }
+  .cat-sections .bc-track { padding-left: 20px; }
+
+
+  .footer { padding: 20px; }
+
+  .page-hero { display: none; }
+
+  /* Tagline + archive-link row is desktop-only; mobile shows just Copyright + English. */
+  .footer-toprow { display: none; }
+  .footer-bottom {
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+    /* The last accordion row (Blog) already has its own border-bottom right
+       above this — without footer-toprow between them, this border-top just
+       doubles that same line. */
+    border-top: none;
+    padding-top: var(--footer-accordion-pad, 8px);
+  }
+
+  /* Each accordion row already reads as "Npx padding above the divider +
+     Npx padding below it" = 2N between any two adjacent text blocks.
+     Matching every other line-to-content gap in this stack (topline→logo,
+     logo→grid, grid→bottom) to that same half makes the whole footer read
+     as one consistent rhythm instead of some gaps being doubled up. */
+  .footer-logo { margin-bottom: var(--footer-accordion-pad, 8px); }
+
+  /* Footer columns collapse into an Apple-style accordion: tap the heading
+     to expand/collapse its links, rest stay closed. */
+  .footer-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: var(--footer-accordion-pad, 8px);
+  }
+  .footer-col {
+    border-bottom: 0.5px solid rgba(0,0,0,0.15);
+  }
+  .footer-col .footer-col-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    /* This is an <h4> — the desktop rule `.footer-col h4 { margin-bottom:
+       12px }` (class+tag) outranks a bare `.footer-col-title` class selector
+       regardless of source order, so it kept winning here even after this
+       was "reset". Matching that same class+tag specificity (via the
+       .footer-col ancestor) is what actually makes the override stick. */
+    margin: 0;
+    padding: var(--footer-accordion-pad, 8px) 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  .footer-col-chevron {
+    display: inline-block;
+    transform: rotate(90deg);
+    transition: transform 0.2s ease;
+    color: #999;
+  }
+  .footer-col--open .footer-col-chevron { transform: rotate(-90deg); }
+  .footer-col ul {
+    display: none;
+    padding-bottom: 14px;
+  }
+  .footer-col--open ul { display: block; }
+
+  .detail-toc { display: none; }
+}
+
+/* ── Tab Switcher ──────────────────────────────────────────── */
+.detail-tab-switcher { padding: 80px 0; }
+
+.detail-tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #e0e0e0;
+  margin: 0 auto 48px;
+  max-width: 900px;
+  padding: 0 5%;
+  box-sizing: border-box;
+  overflow-x: auto;
+}
+
+.detail-tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  color: #888;
+  white-space: nowrap;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.detail-tab-btn.active { color: #111; border-bottom-color: #111; }
+.detail-tab-btn:hover:not(.active) { color: #444; }
+
+.detail-tab-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 5%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.detail-tab-img-wrap {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.detail-tab-text h2 { margin: 0 0 16px; font-size: 24px; }
+.detail-tab-text p  { margin: 0; font-size: 16px; line-height: 1.7; color: #444; }
+
+/* ── Image Tab Switcher ─────────────────────────────────────── */
+.detail-image-tab {
+  padding: 80px 0;
+}
+.detail-image-tab-heading {
+  text-align: center;
+  margin: 0 0 48px;
+  padding: 0 var(--gutter);
+}
+.detail-image-tab-stage {
+  padding: 0 var(--gutter);
+  position: relative;
+}
+.detail-image-tab-item {
+  display: none;
+  flex-direction: column;
+  gap: 24px;
+}
+.detail-image-tab-item.active { display: flex; }
+.detail-image-tab-img-wrap { width: 100%; overflow: hidden; border-radius: 8px; position: relative; aspect-ratio: 16/9; }
+.detail-image-tab-img-wrap img { width: 100%; display: block; }
+
+/* The per-tab "description" image — swapped in below the tab bar/stage as
+   the active tab changes, same padded column as the rest of the section. */
+.detail-image-tab-desc { padding: 0 var(--gutter); margin-top: 32px; display: flex; flex-direction: column; gap: 16px; }
+.detail-image-tab-desc-img-wrap { width: 100%; overflow: hidden; border-radius: 8px; position: relative; aspect-ratio: 16/9; }
+.detail-image-tab-desc-img-wrap img { width: 100%; display: block; }
+.detail-image-tab-text h3 { margin: 0 0 12px; font-size: 20px; }
+.detail-image-tab-text p  { margin: 0; font-size: 15px; line-height: 1.7; color: #555; }
+
+/* shared bar base */
+.detail-image-tab-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--gutter);
+  overflow-x: auto;
+  gap: 0;
+}
+.detail-image-tab-bar--top  { margin-bottom: 32px; }
+.detail-image-tab-bar--bottom { margin-top: 32px; }
+.detail-image-tab-below-text { margin-top: 24px; }
+
+/* ── size modifiers (apply to btn, dot, swatch) ── */
+.detail-image-tab-bar--sm .detail-image-tab-btn { padding: 8px 16px; font-size: 12px; }
+.detail-image-tab-bar--md .detail-image-tab-btn { padding: 14px 24px; font-size: 14px; }
+.detail-image-tab-bar--lg .detail-image-tab-btn { padding: 18px 32px; font-size: 16px; }
+
+.detail-image-tab-bar--sm .detail-image-tab-dot { width: 7px; height: 7px; margin: 0 5px; }
+.detail-image-tab-bar--md .detail-image-tab-dot { width: 9px; height: 9px; margin: 0 6px; }
+.detail-image-tab-bar--lg .detail-image-tab-dot { width: 12px; height: 12px; margin: 0 8px; }
+
+.detail-image-tab-bar--sm .detail-image-tab-swatch { width: 28px; height: 28px; }
+.detail-image-tab-bar--md .detail-image-tab-swatch { width: 36px; height: 36px; }
+.detail-image-tab-bar--lg .detail-image-tab-swatch { width: 48px; height: 48px; }
+
+/* ── UNDERLINE style ── */
+/* Shrink-wraps to the tab labels themselves (instead of the shared bar's
+   full-width padding box) so the border only spans where the items are —
+   position is carried by margin (set inline per tabAlign) instead of the
+   padding every other tab style relies on for its centering. */
+.detail-image-tab-bar--underline {
+  border-top: 1px solid #e0e0e0;
+  gap: 0;
+  justify-content: flex-start;
+  padding: 0;
+  width: fit-content;
+  max-width: 100%;
+  margin-left: var(--gutter);
+}
+.detail-image-tab-bar--underline.detail-image-tab-bar--top {
+  border-top: none;
+  border-bottom: 1px solid #e0e0e0;
+}
+.detail-image-tab-btn--underline {
+  background: none;
+  border: none;
+  border-top: 2px solid transparent;
+  font-family: inherit;
+  cursor: pointer;
+  color: #888;
+  white-space: nowrap;
+  margin-top: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.detail-image-tab-bar--top .detail-image-tab-btn--underline {
+  border-top: none;
+  border-bottom: 2px solid transparent;
+  margin-top: 0;
+  margin-bottom: -1px;
+}
+.detail-image-tab-btn--underline.active { color: #111; border-top-color: #111; }
+.detail-image-tab-bar--top .detail-image-tab-btn--underline.active { border-top-color: transparent; border-bottom-color: #111; }
+.detail-image-tab-btn--underline:hover:not(.active) { color: #444; }
+
+/* ── PILL style ── */
+.detail-image-tab-bar--pill { gap: 8px; flex-wrap: wrap; }
+.detail-image-tab-btn--pill {
+  background: none;
+  border: 1.5px solid #ccc;
+  border-radius: 999px;
+  font-family: inherit;
+  cursor: pointer;
+  color: #666;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.detail-image-tab-btn--pill.active {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+.detail-image-tab-btn--pill:hover:not(.active) {
+  border-color: #999;
+  color: #333;
+}
+
+/* ── CARD style ── */
+.detail-image-tab-bar--card { gap: 8px; flex-wrap: wrap; }
+.detail-image-tab-btn--card {
+  background: #f5f5f5;
+  border: none;
+  border-radius: 10px;
+  font-family: inherit;
+  cursor: pointer;
+  color: #888;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.detail-image-tab-btn--card.active { background: #111; color: #fff; }
+.detail-image-tab-btn--card:hover:not(.active) { background: #e8e8e8; color: #333; }
+
+/* ── DOT style ── */
+.detail-image-tab-bar--dot { gap: 0; }
+.detail-image-tab-dot {
+  border: none;
+  border-radius: 50%;
+  background: #ccc;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.2s, transform 0.2s;
+}
+.detail-image-tab-dot.active { background: #111; transform: scale(1.3); }
+.detail-image-tab-dot:hover:not(.active) { background: #999; }
+
+/* ── SWATCH style (Apple color picker) ── */
+.detail-image-tab-bar--swatch {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16px;
+  border: none;
+  overflow: visible;
+  padding-top: 8px;
+  padding-bottom: 36px;
+  align-items: flex-start;
+}
+.detail-image-tab-swatch-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.detail-image-tab-swatch {
+  border-radius: 50%;
+  background: #ccc;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: block;
+  flex-shrink: 0;
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+  box-shadow: inset 0 1px 4px rgba(0,0,0,0.18), inset 0 0px 1px rgba(0,0,0,0.10);
+  transition: outline-color 0.15s, transform 0.15s;
+}
+.detail-image-tab-swatch:hover { transform: scale(1.08); }
+.detail-image-tab-swatch-label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #111;
+  font-weight: 500;
+  white-space: nowrap;
+  line-height: 1.3;
+  pointer-events: none;
+}
+
+/* ── Image Tab: dark mode ──────────────────────────────────── */
+:root.dark-nav .detail-image-tab-text h3 { color: #fff; }
+:root.dark-nav .detail-image-tab-text p { color: #aaa; }
+
+:root.dark-nav .detail-image-tab-bar--underline { border-top-color: #333; }
+:root.dark-nav .detail-image-tab-bar--underline.detail-image-tab-bar--top { border-bottom-color: #333; }
+:root.dark-nav .detail-image-tab-btn--underline { color: #999; }
+:root.dark-nav .detail-image-tab-btn--underline.active { color: #fff; border-top-color: #fff; }
+:root.dark-nav .detail-image-tab-bar--top .detail-image-tab-btn--underline.active { border-top-color: transparent; border-bottom-color: #fff; }
+:root.dark-nav .detail-image-tab-btn--underline:hover:not(.active) { color: #ccc; }
+
+:root.dark-nav .detail-image-tab-btn--pill { border-color: #555; color: #ccc; }
+:root.dark-nav .detail-image-tab-btn--pill.active { background: #f0f0f0; color: #111; border-color: #f0f0f0; }
+:root.dark-nav .detail-image-tab-btn--pill:hover:not(.active) { border-color: #888; color: #fff; }
+
+:root.dark-nav .detail-image-tab-btn--card { background: #2a2a2c; color: #ccc; }
+:root.dark-nav .detail-image-tab-btn--card.active { background: #f0f0f0; color: #111; }
+:root.dark-nav .detail-image-tab-btn--card:hover:not(.active) { background: #3a3a3c; color: #fff; }
+
+:root.dark-nav .detail-image-tab-dot { background: #555; }
+:root.dark-nav .detail-image-tab-dot.active { background: #f0f0f0; }
+:root.dark-nav .detail-image-tab-dot:hover:not(.active) { background: #888; }
+
+:root.dark-nav .detail-image-tab-swatch-label { color: #fff; }
+
+/* ── Accordion ─────────────────────────────────────────────── */
+.detail-accordion { padding: 80px 5%; box-sizing: border-box; }
+
+.detail-accordion-heading {
+  margin: 0 auto 48px;
+  max-width: 700px;
+  font-size: 28px;
+}
+
+.detail-accordion-list {
+  max-width: 700px;
+  margin: 0 auto;
+  border-top: 1px solid #e0e0e0;
+}
+
+.detail-accordion-item { border-bottom: 1px solid #e0e0e0; }
+
+.detail-accordion-trigger {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 20px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  color: #111;
+  text-align: left;
+  gap: 16px;
+}
+.detail-accordion-icon { font-size: 20px; color: #666; flex-shrink: 0; line-height: 1; }
+
+.detail-accordion-body {
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+.detail-accordion-body-inner {
+  padding-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.detail-accordion-img-wrap {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+  position: relative;
+  aspect-ratio: 16/9;
+}
+.detail-accordion-body-inner p {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.75;
+  color: #555;
+}
+
+/* ── Video Background ──────────────────────────────────────── */
+.detail-section-video-bg {
+  position: relative;
+  overflow: hidden;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detail-video-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.detail-video-overlay {
+  position: relative;
+  z-index: 1;
+  padding: 80px 5%;
+  box-sizing: border-box;
+  max-width: 700px;
+  color: #fff;
+}
+.detail-video-overlay-center { text-align: center; }
+.detail-video-overlay-left   { text-align: left; align-self: flex-start; }
+.detail-video-overlay-right  { text-align: right; align-self: flex-end; }
+
+.detail-video-overlay h2 { margin: 0 0 16px; font-size: 36px; }
+.detail-video-overlay p  { margin: 0; font-size: 17px; line-height: 1.7; opacity: 0.85; }
+
+.detail-section-video-ratio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  padding: 80px 5%;
+  box-sizing: border-box;
+}
+
+.detail-video-ratio-wrap {
+  position: relative;
+  width: 100%;
+  /* No default cap: fills the full width between the section's own gutters
+     (22% via matchTextPadding, or 5% otherwise) unless a section explicitly
+     sets a smaller videoMaxWidth inline. */
+  max-width: none;
+  overflow: hidden;
+  border-radius: 12px;
+  /* Stays centered even when matchTextPadding pins the section's flex-items
+     to flex-start for the (intentionally left-aligned) overlay text. */
+  align-self: center;
+}
+
+.detail-video-ratio {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.detail-video-ratio-text { max-width: 700px; }
+.detail-video-ratio-text h2 { margin: 0 0 16px; font-size: 36px; }
+.detail-video-ratio-text p  { margin: 0; font-size: 17px; line-height: 1.7; opacity: 0.85; }
+
+.detail-youtube-iframe {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+  position: absolute;
+  inset: 0;
+}
+
+.detail-youtube-thumb {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  background: #000;
+  display: block;
+}
+
+.detail-youtube-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.detail-youtube-thumb:hover .detail-youtube-play {
+  background: rgba(220, 30, 30, 0.9);
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+@media (max-width: 768px) {
+  .detail-tab-bar { padding: 0 20px; }
+  .detail-tab-btn { padding: 10px 16px; font-size: 13px; }
+  .detail-tab-content { padding: 0 20px; }
+  .detail-tab-text h2 { font-size: 20px; }
+  .detail-tab-text p  { font-size: 14px; }
+
+  .detail-accordion { padding: 60px 20px; }
+  .detail-accordion-heading { font-size: 22px; }
+  .detail-accordion-trigger { font-size: 14px; padding: 16px 0; }
+  .detail-accordion-body-inner p { font-size: 14px; }
+
+  .detail-section-video-bg { min-height: 300px; }
+  .detail-video-overlay h2 { font-size: 26px; }
+  .detail-video-overlay p  { font-size: 14px; }
+  .detail-video-ratio-text p  { font-size: 14px; }
+
+  .detail-feature-tabs-content p { font-size: 14px; }
+  .detail-image-tab-text p { font-size: 14px; }
+  .blog-post-body { font-size: 14px; }
+}
+
+/* ───── Tablet (601–768px): follow desktop's page-edge padding ─────
+   Several ≤768px rules above are shared by true mobile (≤600px) and tablet,
+   collapsing both down to a flat 20px inset. Tablet should generally read as
+   a narrower desktop rather than a wider phone, so this block resets just
+   the horizontal/page-edge padding on those shared selectors back to their
+   desktop values — layout structure (column stacking, aspect ratios, hidden
+   elements) from the ≤768px rules is left alone since that's still
+   appropriate at tablet width. Must stay after every other rule in this
+   file so it wins the cascade within 601–768px. */
+@media (min-width: 601px) and (max-width: 768px) {
+  /* .navbar itself drops to 6% in this range (5 links + search icon don't
+     fit at 22%) — every page follows suit so nothing reads as more indented
+     than the bar right above it. */
+  .detail-nav { padding: 12px 6%; }
+  .detail-overview { padding: 60px 6%; }
+  .detail-section-text-body { padding: 0 6%; }
+  .detail-full-overlay-left { left: 6%; }
+  .detail-full-overlay-right { right: 6%; }
+  .detail-others { padding: 60px 40px 60px 6%; }
+  .detail-stats { padding: 80px 6%; gap: 60px; }
+  .bc-track { padding: 0 0 32px 6%; }
+  .bc-nav { padding: 0 6%; }
+  .projects-recent { padding: var(--category-title-top-gap, 60px) 6% 40px; }
+  .blog-list { padding: 40px 6%; }
+  .cat-sections .detail-section-mid { padding-left: 6%; padding-right: 6%; }
+  .cat-sections .bc-track { padding-left: 6%; }
+  .footer { padding: 40px 6%; }
+  .about-intro { padding: var(--about-intro-top-gap, 60px) 6% 60px; }
+  .about-strategy { padding: 60px 6%; }
+  .about-philosophy { padding: 60px 6%; }
+  .about-photos { padding: 60px 6%; }
+  .about .detail-section-mid { padding: 60px 6%; }
+  .contacts-intro { padding: var(--contacts-intro-top-gap, 60px) 6% 60px; }
+  .contacts .detail-section-mid { padding: 60px 6%; }
+  .contacts-form { padding: 60px 6%; }
+  .contacts-form-done { padding: 60px 6%; }
+  .projects-category-hero { padding-left: 6%; padding-right: 6%; }
+  .detail-footnote { padding: 24px 6% 40px; }
+  .detail-image-tab-heading { padding: 0 6%; }
+  .detail-image-tab-stage { padding: 0 6%; }
+  .detail-image-tab-desc { padding: 0 6%; }
+  .detail-image-tab-bar { padding: 0 6%; }
+  .detail-image-tab-bar--underline { padding: 0; margin-left: 6%; }
+  .detail-section-mid--padded { padding-left: 6%; padding-right: 6%; }
+  .detail-section-mid--grid { padding-left: var(--grid-pad, 6%); padding-right: var(--grid-pad, 6%); }
+}
+
+/* Reusable "match the text gutter" side padding for section types that have
+   no dedicated class of their own (image+text, video-ratio) — same 3-tier
+   behavior as .detail-section-text-body: 22% desktop, 20px mobile, 6% tablet
+   (matching .detail-nav/.detail-overview above). Was previously computed
+   inline in JS off `isMobile`/`tier`, which couldn't express the
+   601-768-only tablet band and duplicated this same breakpoint logic per
+   call site. Placed at the true end of the file — .detail-section-mid's own
+   `padding: 40px 0` (≤768px) and .detail-section-video-ratio's unconditional
+   `padding: 80px 5%` are equal-specificity single-class rules that appear
+   earlier, so this needs to win the cascade by source order, not just
+   specificity. */
+.match-text-pad { padding-left: var(--gutter); padding-right: var(--gutter); box-sizing: border-box; }
+@media (max-width: 600px) {
+  .match-text-pad { padding-left: 20px; padding-right: 20px; }
+  .detail-image-tab-bar--underline { margin-left: 20px; }
+}
+@media (min-width: 601px) and (max-width: 768px) {
+  .match-text-pad { padding-left: 6%; padding-right: 6%; }
+}
+
+/* Interactive section: a public/lab/<slug>/ piece in an iframe (LabEmbed). */
+.lab-embed { width: 100%; }
+.lab-embed-open { display: inline-block; margin-top: 10px; font-size: 13px; color: inherit; opacity: 0.6; text-decoration: none; }
+.lab-embed-open:hover { opacity: 1; }
+
+/* ───── Organization sections (src/components/OrgSections.jsx) ───── */
+.org-section { flex-direction: column; align-items: stretch; }
+.org-section-heading { margin-bottom: 32px; }
+.org-people { display: flex; flex-direction: column; gap: 40px; width: 100%; }
+.org-people-grid { display: grid; grid-template-columns: repeat(var(--org-columns, 4), minmax(0, 1fr)); gap: 32px 24px; }
+.org-people-featured { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+.org-people-featured .org-person { display: grid; grid-template-columns: 200px 1fr; gap: 24px; align-items: center; padding: 24px; border-radius: 20px; background: #f5f5f7; }
+.org-person { display: flex; flex-direction: column; gap: 14px; color: inherit; text-decoration: none; }
+.org-person--link:hover .org-person-name { text-decoration: underline; }
+.org-person-photo { aspect-ratio: 1 / 1; border-radius: 16px; overflow: hidden; background: #f0f0f2; }
+.org-person-text { display: flex; flex-direction: column; gap: 4px; }
+.org-person-badge { align-self: flex-start; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; color: #fff; background: #111; border-radius: 999px; padding: 4px 10px; margin-bottom: 6px; }
+.cat-sections .org-person p { line-height: 1.4; }
+.org-person .org-person-name { font-size: 19px; font-weight: 700; margin: 0; color: #111; }
+.org-person .org-person-role { font-size: 15px; font-weight: 500; color: #555; margin: 0; }
+.org-person .org-person-affiliation { font-size: 14px; color: #86868d; margin: 0; }
+.org-person .org-person-bio { font-size: 14px; line-height: 1.5; color: #86868d; margin: 6px 0 0; }
+.org-recent-posts { list-style: none; margin: 0; padding: 0; border-top: 1px solid #e5e5ea; width: 100%; }
+.org-recent-post { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 18px 0; border-bottom: 1px solid #e5e5ea; color: inherit; text-decoration: none; }
+.org-recent-post:hover .org-recent-post-title { text-decoration: underline; }
+.org-recent-post-title { font-size: 17px; font-weight: 600; }
+.org-recent-post-date { font-size: 14px; color: #86868d; white-space: nowrap; font-variant-numeric: tabular-nums; }
+@media (max-width: 1023px) { .org-people-grid { grid-template-columns: repeat(min(var(--org-columns, 4), 3), minmax(0, 1fr)); } }
+@media (max-width: 767px) {
+  .org-people-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 16px; }
+  .org-people-featured .org-person { grid-template-columns: 1fr; padding: 16px; }
+  .org-person .org-person-name { font-size: 17px; }
+}

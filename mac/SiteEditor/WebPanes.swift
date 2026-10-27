@@ -203,3 +203,49 @@ struct WebViewHost: NSViewRepresentable {
         if abs(view.pageZoom - pageZoom) > 0.001 { view.pageZoom = pageZoom }
     }
 }
+
+/// The site's home page at desktop size, drawn out of sight: Finder shows a
+/// package's QuickLook/Thumbnail.png as its icon.
+@MainActor
+enum HomeThumbnail {
+    static func capture(document: SiteDocument, width: Double) async -> CGImage? {
+        let size = EditorModel.Device.desktop.size
+        // An unseen window's animations never run, so pages fading in would
+        // stay blank: everything jumps to how it ends, animated images too.
+        let (webView, support) = WebViewSupport.makeWebView(document: document, role: "thumbnail", stillImages: true) { config in
+            config.userContentController.addUserScript(WKUserScript(source: Self.stillScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        }
+        // WebKit only draws a view in a window; this one sits off every screen.
+        let window = NSWindow(contentRect: CGRect(origin: CGPoint(x: -30_000, y: -30_000), size: size),
+                              styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = webView
+        window.orderBack(nil)
+        defer { window.orderOut(nil); window.contentView = nil }
+
+        final class Once { var done = false }
+        let once = Once()
+        let loaded = await withCheckedContinuation { (c: CheckedContinuation<Bool, Never>) in
+            let finish = { (ok: Bool) in if !once.done { once.done = true; c.resume(returning: ok) } }
+            support.onFinish = { _ in finish(true) }
+            webView.load(URLRequest(url: URL(string: "\(PackageSchemeHandler.scheme)://site/")!))
+            DispatchQueue.main.asyncAfter(deadline: .now() + 20) { finish(false) }
+        }
+        guard loaded else { return nil }
+        // Content, fonts, images and entrance animations settle.
+        try? await Task.sleep(nanoseconds: 3_000_000_000)
+        let config = WKSnapshotConfiguration()
+        config.rect = webView.bounds
+        config.snapshotWidth = NSNumber(value: width / window.backingScaleFactor)
+        config.afterScreenUpdates = true
+        return (try? await webView.takeSnapshot(configuration: config))?.cgImage(forProposedRect: nil, context: nil, hints: nil)
+    }
+
+    private static let stillScript = """
+    (() => {
+      const style = document.createElement('style');
+      style.textContent = '*,*::before,*::after{animation-duration:0s!important;animation-delay:0s!important;transition:none!important}';
+      document.documentElement.appendChild(style);
+    })();
+    """
+}

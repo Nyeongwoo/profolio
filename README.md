@@ -2,7 +2,7 @@
 
 A native Mac app for editing and publishing portfolio websites — edit, preview and publish in one window.
 
-I built Profolio to run my own site, [nnwoo.com](https://nnwoo.com). This repository holds the app and the tooling that builds and releases it. The site it edits stays in its own private repository.
+I built Profolio to run my own site, [nnwoo.com](https://nnwoo.com), which is now one site made with it. This repository holds the app, the site template every new site starts from, and the tooling that builds and releases them.
 
 <!-- Screenshots: add images to docs/screenshots/ and link them here. -->
 > Screenshots coming soon.
@@ -33,7 +33,7 @@ The installer ([public/profolio/install.sh](public/profolio/install.sh)) downloa
 
 - **Swift, SwiftUI and AppKit** (`mac/SiteEditor/`). AppKit handles the windows, menus and document handling. SwiftUI builds the forms and sheets. WKWebView renders the preview and the web editor.
 - **The `.portfolio` package** ([docs/siteproj-format.md](docs/siteproj-format.md)) is a document bundle holding a site's content, images, Lab pieces, backups and a built copy of the site's web editor. It usually lives in iCloud Drive so it syncs between Macs.
-- **The editor API runs in JavaScriptCore.** The site's Node/Express editor server is bundled by `scripts/siteproj.js` with small shims (`scripts/editor-api/`) for `fs`, `path`, `express` and friends. It runs inside the app, confined to the package, so editing needs no Node on the Mac. `scripts/editor-api/test.js` is its Node twin for testing.
+- **The editor API runs in JavaScriptCore.** The site's Node/Express editor server is bundled by `template/scripts/siteproj.js` with small shims (`template/scripts/editor-api/`) for `fs`, `path`, `express` and friends. It runs inside the app, confined to the package, so editing needs no Node on the Mac. `template/scripts/editor-api/test.js` is its Node twin for testing.
 - **GitHub** uses the OAuth device flow or a pasted fine-grained token, stored in the Keychain.
 - **Dependencies:** [Sparkle](https://sparkle-project.org) via Swift Package Manager, and [libwebp](https://chromium.googlesource.com/webm/libwebp) vendored in `mac/SiteEditor/libwebp` (BSD license, see `LICENSE-libwebp.txt`).
 
@@ -44,13 +44,14 @@ mac/
   SiteEditor.xcodeproj     Xcode project (target SiteEditor, builds Profolio.app)
   SiteEditor/              Swift sources, Help pages, app icon, libwebp
   Info.plist
+template/                  the site template (React + Vite, editor server, sample content)
+  scripts/siteproj.js      builds .portfolio packages and the web editor
+  scripts/editor-api/      JavaScriptCore shims for the bundled editor server
 scripts/
-  siteproj.js              builds .portfolio packages, the web editor and the starter site
-  starter.js               the starter site New Site begins from
-  editor-api/              JavaScriptCore shims for the bundled editor server
-  release-profolio.sh      builds, zips, signs and publishes a release to the feed
+  build-starter.js         builds StarterSite.zip (template/ + editor) for New Site
+  release-profolio.sh      builds, signs and publishes a release (GitHub Releases + Pages feed)
   update-profolio.sh       builds and installs Profolio on this Mac
-public/profolio/install.sh the one-line installer
+pages/install.sh           the one-line installer, served from GitHub Pages
 docs/siteproj-format.md    the .portfolio package format
 ```
 
@@ -62,10 +63,9 @@ Open `mac/SiteEditor.xcodeproj` in Xcode (macOS 15 SDK or later) and run the **S
 - Set `GITHUB_CLIENT_ID` to your own GitHub OAuth App (device flow enabled), or leave it empty and paste a token in the app.
 - The update feed (`SUFeedURL`) and `SUPublicEDKey` in `mac/Info.plist` point at the official releases. Change them if you publish your own builds.
 
-Some parts are not in this repository, and the scripts that need them expect to run from the site repository:
+The starter site (`StarterSite.zip`, which File ▸ New Site… and Update Site… use) is built by `node scripts/build-starter.js` (Node 20 or later) from `template/`; the release and update scripts run it before building. Without it the app still builds and edits existing sites, but New Site has no starter to use.
 
-- **The starter site** (`StarterSite.zip`, which File ▸ New Site… uses) is built by `node scripts/siteproj.js starter` from the site's source. Without it the app still builds and edits existing sites, but New Site has no starter to use.
-- **The web editor and editor server** that go into each `.portfolio` package are built from the site's source (`vite build --mode app`).
+To work on the site template, run `npm install` and `npm run dev:all` in `template/`. Changes reach sites through Update Site… in the next release.
 
 ## License
 

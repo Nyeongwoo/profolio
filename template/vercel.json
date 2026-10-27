@@ -1,0 +1,35 @@
+{
+  "redirects": [
+    {
+      "source": "/projects/mobility/nargo",
+      "destination": "/projects/product/nargo",
+      "permanent": true
+    },
+    {
+      "source": "/projects/mobility/kokorobo",
+      "destination": "/projects/product/kokorobo",
+      "permanent": true
+    },
+    {
+      "source": "/projects/mobility/myflow",
+      "destination": "/projects/service/myflow",
+      "permanent": true
+    },
+    {
+      "source": "/projects/mobility/plana",
+      "destination": "/projects/service/plana",
+      "permanent": true
+    },
+    {
+      "source": "/projects/mobility",
+      "destination": "/projects",
+      "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/((?!lab/|profolio/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

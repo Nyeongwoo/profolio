@@ -436,7 +436,10 @@ struct PathFilter {
     private let exclude: [NSRegularExpression]
 
     init(_ paths: SiteManifest.Paths) {
-        include = paths.include.map(Self.regex)
+        // Packages made before languages could be added list only the
+        // Korean and Chinese dictionaries; any language's counts now.
+        let globs = paths.include.contains("src/i18n/ko.json") ? paths.include + ["src/i18n/*.json"] : paths.include
+        include = globs.map(Self.regex)
         exclude = paths.exclude.map(Self.regex)
     }
 

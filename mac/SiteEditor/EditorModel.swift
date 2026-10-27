@@ -27,7 +27,17 @@ final class EditorModel: ObservableObject {
         }
     }
 
-    static let languages = [("en", "EN"), ("ko", "KO"), ("zh", "ZH")]
+    /// Every language a site can have, English first (src/i18n/languages.js).
+    nonisolated static let allLanguages: [(code: String, name: String)] = [
+        ("en", "English"), ("ko", "Korean"), ("zh", "Chinese (Simplified)"), ("ja", "Japanese"),
+        ("es", "Spanish"), ("fr", "French"), ("de", "German"),
+    ]
+    nonisolated static let otherLanguageCodes = allLanguages.dropFirst().map(\.code)
+    nonisolated static func languageName(_ code: String) -> String { allLanguages.first { $0.code == code }?.name ?? code.uppercased() }
+
+    /// The site's languages (siteConfig.languages), English first, with
+    /// their toolbar labels. A site without the setting is English-only.
+    @Published private(set) var languages: [(String, String)] = [("en", "EN")]
 
     let document: SiteDocument
     let preview: PreviewPane
@@ -49,6 +59,11 @@ final class EditorModel: ObservableObject {
         var category: String
     }
     @Published var showPublish = false
+    @Published var showUpdateSite = false
+    @Published var showCodingAgents = false
+    @Published var showDomain = false
+    /// The tour of the app (Help ▸ Profolio Tour; shown once on its own).
+    @Published var showTutorial = !UserDefaults.standard.bool(forKey: TutorialView.seenKey)
     /// Bumped when an item's name or visibility changes outside its form
     /// (the sidebar), so the form reads it again.
     @Published var inspectorRevision = 0
@@ -103,6 +118,7 @@ final class EditorModel: ObservableObject {
 
         lab.editor = self
         reloadIndex()
+        refreshLanguages()
         let start = UserDefaults.standard.string(forKey: selectionKey).flatMap { index.node(Self.nodeID(of: $0)) != nil ? $0 : nil } ?? "home"
         apply(start)
         refreshChanges()
@@ -192,6 +208,30 @@ final class EditorModel: ObservableObject {
         pendingScroll = false
     }
 
+    // MARK: - Finder thumbnail
+
+    private var thumbnailTask: Task<Void, Never>?
+
+    /// Redraws the package's Finder icon from the home page a few seconds
+    /// after the site opens or its content last changed (refreshChanges).
+    private func scheduleThumbnail(after seconds: Double = 5) {
+        thumbnailTask?.cancel()
+        thumbnailTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            guard !Task.isCancelled, let self, let package = self.document.packageURL,
+                  let image = await HomeThumbnail.capture(document: self.document, width: 1024), !Task.isCancelled,
+                  let png = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else { return }
+            let file = package.appendingPathComponent("QuickLook/Thumbnail.png")
+            guard (try? Data(contentsOf: file)) != png else { return }
+            do {
+                try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try png.write(to: file, options: .atomic)
+                // Finder redraws the icon when the package itself changes.
+                try FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: package.path)
+            } catch {}
+        }
+    }
+
     private func pickSection(anchor: String) {
         guard let node = currentNode, let section = node.sections.first(where: { $0.anchor == anchor }) else { return }
         selection = section.id
@@ -201,7 +241,7 @@ final class EditorModel: ObservableObject {
 
     private func previewNavigated(to path: String) {
         var p = path
-        for (code, _) in Self.languages where code != "en" {
+        for code in Self.otherLanguageCodes {
             if p == "/\(code)" { p = "/" } else if p.hasPrefix("/\(code)/") { p = String(p.dropFirst(code.count + 1)) }
         }
         guard let node = index.node(forPreviewPath: p), node.id != currentNode?.id else { return }
@@ -239,6 +279,22 @@ final class EditorModel: ObservableObject {
         flushEdits()
         if webForm { useNativeForm() }
         refreshTranslationStatus()
+    }
+
+    /// Reads the site's languages again; leaves a language that was turned off.
+    func refreshLanguages() {
+        let on = Set((sideDocument("src/data/siteConfig.json")?.root["languages"]?.array ?? []).compactMap(\.string))
+        languages = Self.allLanguages.filter { $0.code == "en" || on.contains($0.code) }.map { ($0.code, $0.code.uppercased()) }
+        if !languages.contains(where: { $0.0 == language }) { setLanguage("en") }
+    }
+
+    /// Turns the site's other languages on or off (the editor API starts a
+    /// new language's dictionary).
+    func setLanguages(_ codes: [String]) async -> String? {
+        sideDocument("src/data/siteConfig.json")?.saveNow()
+        let r = await callAPI("POST", "/api/languages", body: ["languages": codes])
+        refreshLanguages()
+        return r.status >= 400 ? ((r.json as? [String: Any])?["error"] as? String ?? "Couldn’t change the languages (\(r.status)).") : nil
     }
 
     /// Recounts what's left to translate (Translate's sidebar counts).
@@ -308,6 +364,7 @@ final class EditorModel: ObservableObject {
         if let content, paths.contains("site/\(content.path)") { content.reloadIfChangedElsewhere() }
         for (path, doc) in sideDocs where paths.isEmpty || paths.contains("site/\(path)") { doc.reloadIfChangedElsewhere() }
         reloadIndex()
+        refreshLanguages()
         if let content { index.replaceSections(of: currentNode?.id ?? "", with: content.root) }
         preview.reloadKeepingScroll()
         texts = nil
@@ -364,6 +421,9 @@ final class EditorModel: ObservableObject {
         return url
     }
 
+    /// Sets the published site's address (Connect Domain does, once a domain works).
+    func setLiveSiteAddress(_ url: URL) { saveLiveSiteAddress(url) }
+
     private func saveLiveSiteAddress(_ url: URL) {
         guard let package = document.packageURL else { return }
         let manifestURL = package.appendingPathComponent("manifest.json")
@@ -402,6 +462,8 @@ final class EditorModel: ObservableObject {
             self.refreshChanges()
             // Content the site bundles at startup (src/data) only shows after a reload.
             if form.livePath == nil && self.currentNode?.id == nodeID { self.preview.reloadKeepingScroll() }
+            // Site Structure can add or remove whole parts of the sidebar.
+            if form.contentPath == "src/data/siteConfig.json" { self.reloadIndex() }
         }
         return (form, doc)
     }
@@ -534,6 +596,8 @@ final class EditorModel: ObservableObject {
         case "text-columns": section.set("columns", .array([empty, empty]))
         case "tab-switcher", "image-tab": section.set("tabs", .array([]))
         case "feature-tabs", "accordion", "stats": section.set("items", .array([]))
+        case "people": section.set("people", .array([])); section.set("lines", .array([]))
+        case "recent-posts": section.set("count", .number("4")); section.set("lines", .array([]))
         case "scroll-animation": section.set("sideItems", .array([])); section.set("lines", .array([]))
         case "video-background", "model-viewer": section.set("lines", .array([]))
         default: break
@@ -556,6 +620,10 @@ final class EditorModel: ObservableObject {
         let cat = category ?? (currentNode?.kind == .item || currentNode?.kind == .category ? currentNode?.subtitle?.lowercased() : nil) ?? ""
         newItem = NewItemRequest(kind: k, category: cat)
     }
+
+    /// Whether a part of the site (originals, blog) is on — the sidebar
+    /// shows it only then.
+    func hasPart(_ id: String) -> Bool { index.tree.contains { $0.id == id } }
 
     func categories(_ type: String) -> [String] {
         let group = index.tree.first { $0.id == type }
@@ -584,6 +652,13 @@ final class EditorModel: ObservableObject {
     func createItem(_ type: String, category: String, id: String, title: String) async -> String? {
         if let e = await run("POST", "/api/\(type)-create", ["category": category, "id": id, "title": title]) { return e }
         open("\(type):\(category)/\(id)")
+        return nil
+    }
+
+    /// A page of the site's own: in pages.json and the menu (editor API).
+    func createPage(id: String, title: String, path: String) async -> String? {
+        if let e = await run("POST", "/api/page-create", ["id": id, "title": title, "path": path]) { return e }
+        open("page:\(id)")
         return nil
     }
 
@@ -621,10 +696,11 @@ final class EditorModel: ObservableObject {
         switch parts[0] {
         case "project": url = "/api/project-delete/\(parts[1])"
         case "post": url = "/api/blog-post-delete/\(parts[1])"
+        case "page": url = "/api/page-delete/\(parts[1])"
         default: return
         }
-        guard confirm("Delete “\(node.title)”?", parts[0] == "project"
-                      ? "Its page and every image in its folder are removed. Backups of its text stay in the project, and the published site keeps it until you publish."
+        guard confirm("Delete “\(node.title)”?", parts[0] == "project" || parts[0] == "page"
+                      ? "Its page and every image in its folder are removed\(parts[0] == "page" ? ", and it leaves the menu" : ""). Backups of its text stay in the project, and the published site keeps it until you publish."
                       : "It’s removed from the post list. The published site keeps it until you publish.", "Delete") else { return }
         if currentNode?.id == node.id { flushEdits(); content = nil; form = nil }
         Task {
@@ -684,6 +760,25 @@ final class EditorModel: ObservableObject {
         Task {
             if let e = await run("POST", "/api/\(parts[0])-category/\(path[0])/\(path[1])", ["newCategory": category]) { report(e); return }
             if wasOpen { selection = nil; apply("\(parts[0]):\(category)/\(path[1])") }
+        }
+    }
+
+    /// A project to Originals or an original to Projects, into `category`
+    /// of the other side (editor API: list, folder, thumbnails, settings).
+    func moveItem(_ node: SiteIndex.Node, toOtherSide category: String) {
+        let parts = node.id.split(separator: ":", maxSplits: 1).map(String.init)
+        let path = parts.count == 2 ? parts[1].split(separator: "/").map(String.init) : []
+        guard path.count == 2, parts[0] == "project" || parts[0] == "original" else { return }
+        let from = parts[0] == "project" ? "projects" : "originals"
+        let to = from == "projects" ? "originals" : "projects"
+        guard confirm("Move “\(node.title)” to \(to.capitalized) ▸ \(category.capitalized)?",
+                      "Its page, images and settings go along. Its address becomes /\(to)/\(category)/\(path[1]); links to the old one stop working. Minimal mode’s picks and the featured order don’t carry over to Originals.",
+                      "Move") else { return }
+        let wasOpen = currentNode?.id == node.id
+        if wasOpen { flushEdits() }
+        Task {
+            if let e = await run("POST", "/api/item-move-type", ["from": from, "category": path[0], "id": path[1], "toCategory": category]) { report(e); return }
+            if wasOpen { selection = nil; apply("\(to == "projects" ? "project" : "original"):\(category)/\(path[1])") }
         }
     }
 
@@ -770,6 +865,7 @@ final class EditorModel: ObservableObject {
 
     /// Recounts unpublished changes in the background (hashes ~1 s of files).
     func refreshChanges() {
+        scheduleThumbnail()
         guard let package = document.packageURL, let manifest = document.manifest else { return }
         changesTask?.cancel()
         changesTask = Task { [weak self] in

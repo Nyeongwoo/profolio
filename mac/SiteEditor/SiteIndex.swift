@@ -56,7 +56,7 @@ struct SiteIndex {
         "text-columns": "Text Columns", "scroll-animation": "Scroll Animation",
         "video-background": "Video", "model-viewer": "3D Model", "tab-switcher": "Tab Switcher",
         "feature-tabs": "Feature Tabs", "accordion": "Accordion", "stats": "Stats",
-        "interactive": "Interactive",
+        "interactive": "Interactive", "people": "People", "recent-posts": "Recent Posts",
     ]
 
     // MARK: - Building
@@ -104,7 +104,16 @@ struct SiteIndex {
             page("about", "About", "person.crop.circle", preview: "/about", editor: "/editor/about", content: "src/data/about.json"),
             page("contacts", "Contacts", "envelope", preview: "/contacts", editor: "/editor/contacts", content: configFile, sectionsKey: "contactsSections"),
             page("archive", "Archive", "archivebox", preview: "/archive", editor: "/editor/archive", content: "src/data/archive.json", sectionsKey: ""),
-        ]
+        ] + list("src/data/pages.json").compactMap { p -> Node? in
+            // The site's own pages (src/data/pages.json; site + adds one).
+            guard let id = p["id"] as? String, let path = p["path"] as? String else { return nil }
+            let nodeID = "page:\(id)"
+            let content = "public/assets/pages/\(id)/info.json"
+            var n = Node(id: nodeID, title: p["title"] as? String ?? id, kind: .item, symbol: "doc.plaintext",
+                         previewPath: path, editorPath: "/editor", contentPath: content, subtitle: path)
+            n.sections = sections(of: nodeID, at: content)
+            return n
+        }
 
         // Projects and originals: categories from the list files plus any
         // (possibly empty) category folders, items under each.
@@ -158,6 +167,7 @@ struct SiteIndex {
         }
 
         let settings = [
+            page("structure", "Site Structure", "square.stack.3d.up", preview: "/", editor: "/editor", content: configFile, sectionsKey: "", kind: .settings),
             page("translations", "Translations", "character.bubble", preview: "/", editor: "/editor/translations", kind: .settings),
             page("navbar", "Navbar", "menubar.rectangle", preview: "/", editor: "/editor/navbar", content: configFile, sectionsKey: "", kind: .settings),
             page("footer", "Footer", "rectangle.bottomthird.inset.filled", preview: "/", editor: "/editor/footer", content: configFile, sectionsKey: "", kind: .settings),
@@ -170,13 +180,15 @@ struct SiteIndex {
             page("not-found", "404 Page", "questionmark.square", preview: "/__pofole-404", editor: "/editor/not-found", content: configFile, sectionsKey: "", kind: .settings),
         ]
 
-        index.tree = [
-            group("pages", "Site", pages),
-            group("projects", "Projects", projects),
-            group("originals", "Originals", originals),
-            group("blog", "Blog", blog),
-            group("settings", "Site settings", settings),
-        ]
+        // Parts switched off in Site Structure leave the sidebar too (turn
+        // them on there to get them back); new sites start without
+        // Originals and Blog.
+        let parts = (config["structure"] as? [String: Any])?["sections"] as? [String: Any] ?? [:]
+        let originalsOn = parts["originals"] as? Bool != false, blogOn = parts["blog"] as? Bool != false
+        index.tree = [group("pages", "Site", pages), group("projects", "Projects", projects)]
+            + (originalsOn ? [group("originals", "Originals", originals)] : [])
+            + (blogOn ? [group("blog", "Blog", blog)] : [])
+            + [group("settings", "Site settings", originalsOn ? settings : settings.filter { $0.id != "all-originals" })]
         index.reindex()
         return index
     }

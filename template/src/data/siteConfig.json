@@ -1,0 +1,270 @@
+{
+  "maintenance": false,
+  "maintenanceTitle": "Be right Back.",
+  "maintenanceDesc": "We're making updates to our site to bring you an even better experience. Check back soon.",
+  "maintenancePassword": "",
+  "maintenanceImage": "",
+  "hiddenProjects": [],
+  "hiddenOriginals": [],
+  "hiddenInAllProjects": [],
+  "hiddenProjectCategories": [],
+  "hiddenInAllOriginals": [],
+  "projectCategoryOrder": [
+    "work",
+    "personal"
+  ],
+  "originalCategoryOrder": [],
+  "iconCarouselMobileGap": "8px",
+  "allProjectsMobileLayout": "1",
+  "allOriginalsLayout": "1",
+  "allOriginalsMobileLayout": "1",
+  "allProjectsText": "",
+  "allOriginalsText": "",
+  "allProjectsTitleSize": "24px",
+  "allProjectsTagSize": "17px",
+  "allOriginalsTitleSize": "",
+  "allOriginalsTagSize": "",
+  "projectsCategoryText": {
+    "work": "",
+    "personal": ""
+  },
+  "originalsCategoryText": {},
+  "blogCategories": [
+    {
+      "id": "research",
+      "label": "Research"
+    },
+    {
+      "id": "report",
+      "label": "Report"
+    },
+    {
+      "id": "essay",
+      "label": "Essay"
+    },
+    {
+      "id": "others",
+      "label": "Others"
+    }
+  ],
+  "navCustomItems": [],
+  "name": "Your Name",
+  "tagline": "",
+  "email": "",
+  "instagram": "",
+  "linkedin": "",
+  "linkedinDisplayName": "",
+  "whatsapp": "",
+  "contactItems": [],
+  "cvFile": "",
+  "cvButtonText": "Download CV",
+  "cvButtonSize": "16px",
+  "cvButtonWeight": "500",
+  "cvButtonColor": "#ffffff",
+  "contactInstagramLabel": "Instagram",
+  "contactInstagramLabelSize": "28px",
+  "contactInstagramLabelWeight": "500",
+  "contactInstagramLabelColor": "",
+  "contactMailLabel": "Mail",
+  "contactMailLabelSize": "28px",
+  "contactMailLabelWeight": "500",
+  "contactMailLabelColor": "",
+  "contactLinkedinLabel": "LinkedIn",
+  "contactLinkedinLabelSize": "28px",
+  "contactLinkedinLabelWeight": "500",
+  "contactLinkedinLabelColor": "",
+  "contactWhatsappLabel": "WhatsApp",
+  "contactWhatsappLabelSize": "28px",
+  "contactWhatsappLabelWeight": "500",
+  "contactWhatsappLabelColor": "",
+  "contactValueSize": "14px",
+  "contactValueWeight": "500",
+  "contactValueColor": "#555555",
+  "contactsHeroDesktopRatio": "",
+  "contactsHeroMobileRatio": "",
+  "contactLinkHoverWeight": "600",
+  "originalCategoryLabels": {},
+  "projectCategoryLabels": {},
+  "allProjectsCaptionEnabled": true,
+  "allProjectsCaptions": {},
+  "allProjectsImageRatio": "1/1",
+  "confidentialProjects": [],
+  "aiBlockingEnabled": true,
+  "allOriginalsCaptionEnabled": true,
+  "allOriginalsCaptions": {},
+  "allOriginalsImageRatio": "16/9",
+  "tocLabelSize": 14,
+  "hiddenOriginalCategories": [],
+  "footerLogoSize": "",
+  "footerTitleSize": "14px",
+  "footerLinkSize": "",
+  "footerBottomSize": "",
+  "categoryHeroTitleSize": {
+    "product": "56px",
+    "all": "56px",
+    "service": "56px",
+    "ip": "56px",
+    "apps": "56px",
+    "research": "56px"
+  },
+  "categoryIconSize": {
+    "product": "72px",
+    "service": "72px",
+    "ip": "72px",
+    "apps": "72px",
+    "research": "72px"
+  },
+  "categoryHeroGap": {
+    "product": "64px",
+    "service": "64px",
+    "ip": "64px",
+    "apps": "64px",
+    "research": "64px"
+  },
+  "categoryAnimDuration": {},
+  "categoryAnimStagger": {},
+  "categoryIconGap": {
+    "product": "60px",
+    "service": "60px",
+    "ip": "60px",
+    "apps": "60px",
+    "research": "60px"
+  },
+  "categoryIconGapMobile": {
+    "product": "40px",
+    "service": "40px",
+    "ip": "40px",
+    "apps": "40px",
+    "research": "40px"
+  },
+  "categoryHeroTitleSizeTablet": {},
+  "categoryHeroTitleSizeMobile": {},
+  "categoryIconSizeTablet": {},
+  "categoryIconSizeMobile": {
+    "product": "80px",
+    "service": "80px",
+    "ip": "80px",
+    "apps": "80px",
+    "research": "80px"
+  },
+  "categoryHeroGapTablet": {},
+  "categoryHeroGapMobile": {
+    "product": "40px",
+    "service": "40px",
+    "ip": "40px",
+    "apps": "40px",
+    "research": "40px"
+  },
+  "categoryIconGapTablet": {},
+  "categoryTitleTopGap": {
+    "product": "100px",
+    "service": "100px",
+    "ip": "100px",
+    "apps": "100px",
+    "all": "100px",
+    "research": "100px"
+  },
+  "categoryTitleTopGapTablet": {},
+  "categoryTitleTopGapMobile": {},
+  "othersIconSize": "72px",
+  "othersIconSizeTablet": "72px",
+  "othersIconSizeMobile": "72px",
+  "othersTitleSize": "40px",
+  "othersTitleSizeMobile": "14px",
+  "notFoundImage": "",
+  "footerColumns": [
+    {
+      "title": "Projects",
+      "items": [
+        {
+          "label": "Work",
+          "link": "/projects/work"
+        },
+        {
+          "label": "Personal",
+          "link": "/projects/personal"
+        }
+      ]
+    }
+  ],
+  "othersIconGap": "60px",
+  "othersTitleBold": true,
+  "othersTitleGap": "64px",
+  "allProjectsHoverStyle": "overlay",
+  "fontFallback": "Inter",
+  "fontFallbackEverywhere": true,
+  "fontFamily": "system-ui",
+  "navIconSize": "22px",
+  "tocBackgroundStyle": "pill",
+  "tocAlwaysShowLabels": false,
+  "allProjectsSections": [],
+  "allProjectsRightCaptions": {},
+  "allOriginalsHoverStyle": "zoom",
+  "allOriginalsSections": [],
+  "allOriginalsRightCaptions": {},
+  "allProjectsTitleGap": "64",
+  "allProjectsTitleGapMobile": "",
+  "allOriginalsCaptionSwap": false,
+  "allOriginalsTitleGap": "64",
+  "allOriginalsTitleGapMobile": "",
+  "blogTitleTopGap": "100",
+  "blogTitleSize": "56px",
+  "blogTitleGap": "64",
+  "blogTitleBold": true,
+  "contactsSections": [],
+  "contactsIntroTopGap": "100",
+  "contactsIntroTitle": "Contact",
+  "contactsIntroTitleSize": "56px",
+  "contactsIntroTitleWeight": "700",
+  "contactsIntroTitleGap": "0",
+  "contactsIntroDescription": "",
+  "footerLogoHideHome": true,
+  "footerLogoHidden": false,
+  "footerIconUrl": "",
+  "contactsFormEndpoint": "",
+  "contactsFormFields": [
+    {
+      "id": "f_1785635934447",
+      "type": "checkbox",
+      "label": "I agree to have my information collected and used to reply to my inquiry.",
+      "required": true
+    }
+  ],
+  "footerAccordionRowPadding": "20px",
+  "hiddenBuiltinNav": [],
+  "featuredOrder": [],
+  "allProjectsCardText": {
+    "items": {
+      "service/coggiri": {
+        "shadow": false
+      }
+    }
+  },
+  "minimalProjects": [],
+  "allProjectsArchiveLinkHidden": true,
+  "categoryProjectOrder": {
+    "product": [
+      "olo",
+      "nargo",
+      "kokorobo",
+      "maizy",
+      "mapo-deskterior",
+      "beakbreak"
+    ],
+    "service": [
+      "profolio",
+      "coggiri",
+      "easysnap",
+      "share-on",
+      "shoong",
+      "myflow"
+    ]
+  },
+  "minimal": false,
+  "structure": {
+    "sections": {
+      "originals": false,
+      "blog": false
+    }
+  }
+}

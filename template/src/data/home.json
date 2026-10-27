@@ -1,0 +1,18 @@
+{
+  "hero": {
+    "desktopRatio": "full",
+    "mobileRatio": "full",
+    "inset": false,
+    "bgColor": ""
+  },
+  "featuredSection": {},
+  "featured": [],
+  "gridSections": [],
+  "homeOriginals": [],
+  "originalsSection": {
+    "showTitle": false,
+    "showDesc": false,
+    "description": ""
+  },
+  "sections": []
+}

@@ -1,7 +1,7 @@
 import Foundation
 
 /// File ▸ New Site…: a new portfolio from the starter site in the app
-/// (StarterSite.zip, built by `node scripts/siteproj.js starter`):
+/// (StarterSite.zip, built by `node scripts/build-starter.js`):
 ///
 /// 1. unpack it and put the owner's name in;
 /// 2. make a GitHub repository for it and commit the site there;
@@ -17,8 +17,14 @@ struct SiteCreator {
         var isPrivate: Bool
         /// The folder the package goes in (e.g. iCloud Drive/<repo>).
         var folder: URL
+        /// A site type from the starter's types.json (nil or portfolio: as built).
+        var siteType: SiteType? = nil
         /// A layout preset from the starter's presets.json (nil: as built).
         var preset: Preset? = nil
+        /// Parts the site starts with (siteConfig.structure).
+        var originals = false
+        var blog = false
+        var projectIcons = true
     }
 
     /// A starting layout: settings merged into the starter's files, key by key.
@@ -32,6 +38,42 @@ struct SiteCreator {
         let files: [(String, JSONValue)]
 
         static func == (a: Preset, b: Preset) -> Bool { a.id == b.id }
+    }
+
+    /// What kind of site a new one starts as (types.json): files it removes,
+    /// writes and merges into the starter.
+    struct SiteType: Identifiable, Equatable {
+        let id: String
+        let name: String
+        let description: String
+        let remove: [String]
+        let write: [(String, JSONValue)]
+        let merge: [(String, JSONValue)]
+
+        static func == (a: SiteType, b: SiteType) -> Bool { a.id == b.id }
+    }
+
+    static func types() -> [SiteType] {
+        (JSONValue.parse(starterFile("types.json") ?? Data())?.array ?? []).compactMap { v in
+            guard let id = v["id"]?.string, let name = v["name"]?.string else { return nil }
+            func pairs(_ key: String) -> [(String, JSONValue)] { if case .object(let p)? = v[key] { return p }; return [] }
+            return SiteType(id: id, name: name, description: v["description"]?.string ?? "",
+                            remove: (v["remove"]?.array ?? []).compactMap(\.string), write: pairs("write"), merge: pairs("merge"))
+        }
+    }
+
+    private static func starterFile(_ name: String) -> Data? {
+        guard let zip = starterZip else { return nil }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+        p.arguments = ["-p", zip.path, name]
+        let pipe = Pipe()
+        p.standardOutput = pipe
+        p.standardError = FileHandle.nullDevice
+        guard (try? p.run()) != nil else { return nil }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        p.waitUntilExit()
+        return p.terminationStatus == 0 ? data : nil
     }
 
     /// The presets in the app's starter site.
@@ -72,12 +114,13 @@ struct SiteCreator {
     }
 
     /// The package's managed paths (docs/siteproj-format.md).
-    static let include = ["src/data/*.json", "src/i18n/ko.json", "src/i18n/zh.json", "public/**"]
+    static let include = ["src/data/*.json", "src/i18n/*.json", "public/**"]
     static let exclude = ["**/backups/**", "**/.DS_Store"]
 
     func create(_ o: Options) async throws -> Result {
         guard let zip = Self.starterZip else { throw PublishError("This copy of Profolio has no starter site.") }
-        let package = o.folder.appendingPathComponent("\(o.repoName).portfolio")
+        // New sites are .profolio; .portfolio packages (made before 2.0) open the same way.
+        let package = o.folder.appendingPathComponent("\(o.repoName).profolio")
         guard !FileManager.default.fileExists(atPath: package.path) else {
             throw PublishError("\(package.lastPathComponent) already exists in that folder.")
         }
@@ -88,6 +131,7 @@ struct SiteCreator {
         defer { try? FileManager.default.removeItem(at: stage) }
         try Self.run("/usr/bin/ditto", ["-x", "-k", zip.path, stage.path])
         let site = stage.appendingPathComponent("site")
+        if let type = o.siteType { try apply(type, to: site) }
         if let preset = o.preset { try apply(preset, to: site) }
         try personalize(site: site, o)
 
@@ -164,9 +208,31 @@ struct SiteCreator {
             "importedAt": now,
         ] as [String: Any], to: package.appendingPathComponent("manifest.json"))
         try BaseIndex(commit: commit.sha, committedAt: commit.date, files: base).save(to: package)
+        // The code it was made with, so Update Site can tell later edits apart.
+        try SiteUpdater.Record(starter: starter["builtFrom"] as? String ?? "",
+                               files: blobs.filter { !filter.contains($0.key) }).save(to: package)
 
         progress("Done")
         return Result(package: package, owner: made.owner, repo: made.name)
+    }
+
+    private func apply(_ type: SiteType, to site: URL) throws {
+        let fm = FileManager.default
+        for path in Self.files(in: site) where type.remove.contains(where: { path.hasPrefix($0) }) {
+            try fm.removeItem(at: site.appendingPathComponent(path))
+        }
+        for (path, value) in type.write {
+            let url = site.appendingPathComponent(path)
+            try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            if let text = value.string { try Data(text.utf8).write(to: url) }
+            else { try Data((value.formatted + "\n").utf8).write(to: url) }
+        }
+        for (path, overrides) in type.merge {
+            let url = site.appendingPathComponent(path)
+            guard var doc = JSONValue.parse(try Data(contentsOf: url)), case .object(let pairs) = overrides else { continue }
+            for (key, value) in pairs { doc.set(key, value) }
+            try Data(doc.formatted.utf8).write(to: url)
+        }
     }
 
     private func apply(_ preset: Preset, to site: URL) throws {
@@ -183,6 +249,9 @@ struct SiteCreator {
         let configURL = site.appendingPathComponent("src/data/siteConfig.json")
         if var config = JSONValue.parse(try Data(contentsOf: configURL)) {
             config.set("name", .string(o.ownerName))
+            config.set(path: ["structure", "sections", "originals"], o.originals ? nil : .bool(false))
+            config.set(path: ["structure", "sections", "blog"], o.blog ? nil : .bool(false))
+            config.set(path: ["structure", "projectIcons"], o.projectIcons ? nil : .bool(false))
             try Data(config.formatted.utf8).write(to: configURL)
         }
         let indexURL = site.appendingPathComponent("index.html")

@@ -15,10 +15,10 @@ final class WebViewSupport: NSObject, WKNavigationDelegate, WKUIDelegate {
         self.role = role
     }
 
-    static func makeWebView(document: SiteDocument, role: String, configure: (WKWebViewConfiguration) -> Void = { _ in })
-        -> (WKWebView, WebViewSupport) {
+    static func makeWebView(document: SiteDocument, role: String, stillImages: Bool = false,
+                            configure: (WKWebViewConfiguration) -> Void = { _ in }) -> (WKWebView, WebViewSupport) {
         let config = WKWebViewConfiguration()
-        config.setURLSchemeHandler(PackageSchemeHandler(document: document), forURLScheme: PackageSchemeHandler.scheme)
+        config.setURLSchemeHandler(PackageSchemeHandler(document: document, stillImages: stillImages), forURLScheme: PackageSchemeHandler.scheme)
         config.preferences.isElementFullscreenEnabled = true
         WebConsole.install(in: config.userContentController)
         configure(config)

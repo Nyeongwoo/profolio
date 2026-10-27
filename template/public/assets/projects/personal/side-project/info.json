@@ -1,0 +1,66 @@
+{
+  "overviewTitle": "Side Project",
+  "overview": "Something made for yourself: why it exists and what you learned.",
+  "type": "Personal project",
+  "duration": "2026",
+  "team": "",
+  "role": "Everything",
+  "metaFields": [
+    {
+      "key": "type",
+      "label": "Type"
+    },
+    {
+      "key": "duration",
+      "label": "Duration"
+    },
+    {
+      "key": "role",
+      "label": "Role"
+    }
+  ],
+  "sections": [
+    {
+      "id": "Overview-side-project",
+      "label": "Overview",
+      "type": "text",
+      "images": [],
+      "blocks": [],
+      "lines": [
+        {
+          "kind": "subtitle",
+          "text": "Overview",
+          "size": "21px",
+          "weight": "700",
+          "color": "",
+          "font": ""
+        },
+        {
+          "kind": "title",
+          "text": "A first section.",
+          "size": "36px",
+          "weight": "700",
+          "color": "",
+          "font": ""
+        },
+        {
+          "kind": "body",
+          "text": "Write about your work here. Add images and more sections from the inspector.",
+          "size": "17px",
+          "weight": "500",
+          "color": "",
+          "font": ""
+        }
+      ]
+    },
+    {
+      "id": "Visuals-side-project",
+      "label": "Visuals",
+      "type": "images",
+      "images": [
+        1
+      ],
+      "blocks": []
+    }
+  ]
+}

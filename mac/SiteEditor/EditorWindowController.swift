@@ -50,6 +50,10 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate {
     }
     @MainActor @objc func saveEdits(_ sender: Any?) { model.save() }
     @MainActor @objc func showPublish(_ sender: Any?) { model.showPublish = true }
+    @MainActor @objc func updateSite(_ sender: Any?) { model.showUpdateSite = true }
+    @MainActor @objc func showCodingAgents(_ sender: Any?) { model.showCodingAgents = true }
+    @MainActor @objc func connectDomain(_ sender: Any?) { model.showDomain = true }
+    @MainActor @objc func showTutorial(_ sender: Any?) { model.showTutorial = true }
     @MainActor @objc func openLiveSite(_ sender: Any?) { Task { await model.openLiveSite() } }
     @MainActor @objc func changeLiveSiteAddress(_ sender: Any?) { _ = model.askLiveSiteAddress() }
     @MainActor @objc func previewDesktop(_ sender: Any?) { model.device = .desktop }

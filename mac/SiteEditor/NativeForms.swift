@@ -27,7 +27,8 @@ struct SectionAssets {
 struct NativeForm {
     enum Page: Equatable {
         case project(String, String), original(String, String), category(String, String)
-        case about, home, contacts, archive, navbar, footer, maintenance, minimal, notFound
+        case about, home, contacts, archive, navbar, footer, maintenance, minimal, structure, notFound
+        case customPage(String)
         case allItems(String), blogLanding, blogList, blogPost(String)
     }
 
@@ -57,6 +58,9 @@ struct NativeForm {
             return form(.project(rest[0], rest[1]), assets: SectionAssets(
                 folder: base.appendingPathComponent("sections"), upload: "/api/images/\(rest[0])/\(rest[1])/sections/upload",
                 mobileFolder: base.appendingPathComponent("mobile"), mobileUpload: "/api/images/\(rest[0])/\(rest[1])/mobile/upload"), live: true)
+        case ("page", 1):
+            return form(.customPage(rest[0]), assets: SectionAssets(
+                folder: assets.appendingPathComponent("pages/\(rest[0])/sections"), upload: "/api/category-images/pages/\(rest[0])/upload"), live: true)
         case ("original", 2):
             let base = assets.appendingPathComponent("originals/\(rest[0])/\(rest[1])")
             return form(.original(rest[0], rest[1]), assets: SectionAssets(
@@ -97,6 +101,7 @@ struct NativeForm {
         case "footer": return form(.footer)
         case "maintenance": return form(.maintenance)
         case "minimal": return form(.minimal)
+        case "structure": return form(.structure)
         case "not-found": return form(.notFound)
         case "blog-list": return form(.blogList)
         default: return nil
@@ -129,6 +134,8 @@ struct PageFields: View {
         case .footer: footer
         case .maintenance: maintenance
         case .minimal: MinimalForm(model: model, doc: doc)
+        case .structure: StructureForm(model: model, doc: doc)
+        case .customPage(let id): CustomPageFields(model: model, doc: doc, pageID: id)
         case .notFound: notFound
         case .allItems(let type): AllItemsForm(model: model, doc: doc, type: type, scope: scope)
         case .blogList: blogList
@@ -177,9 +184,12 @@ struct PageFields: View {
     @ViewBuilder private var home: some View {
         let mobileSuffix = scope == .mobile ? "Mobile" : ""
         InspectorGroup(title: "Hero") {
-            ImagePathSlot(model: model, doc: doc, path: ["hero", "image"], label: "Image", target: "/assets/home/hero")
-            ImagePathSlot(model: model, doc: doc, path: ["hero", "tabletImage"], label: "Tablet image", target: "/assets/home/hero-tablet", optional: true)
-            ImagePathSlot(model: model, doc: doc, path: ["hero", "mobileImage"], label: "Phone image", target: "/assets/home/hero-mobile", optional: true)
+            ImagePathSlot(model: model, doc: doc, path: ["hero", "image"], label: "Image", target: "/assets/home/hero",
+                          ratio: ImageRatio.text(doc.root[path: ["hero", "desktopRatio"]]?.string ?? "full"))
+            ImagePathSlot(model: model, doc: doc, path: ["hero", "tabletImage"], label: "Tablet image", target: "/assets/home/hero-tablet", optional: true,
+                          ratio: ImageRatio.text(doc.root[path: ["hero", "tabletRatio"]]?.string ?? doc.root[path: ["hero", "mobileRatio"]]?.string ?? "5/4", width: 1600, portrait: true))
+            ImagePathSlot(model: model, doc: doc, path: ["hero", "mobileImage"], label: "Phone image", target: "/assets/home/hero-mobile", optional: true,
+                          ratio: ImageRatio.text(doc.root[path: ["hero", "mobileRatio"]]?.string ?? "5/4", width: 1200, portrait: true))
             JPicker(doc: doc, path: ["hero", "desktopRatio"], label: "Ratio", options: [("full", "Fullscreen")] + SiteOptions.ratios.dropFirst())
             JPicker(doc: doc, path: ["hero", "tabletRatio"], label: "Tablet ratio", options: [("", "Same"), ("full", "Fullscreen")] + SiteOptions.ratios.dropFirst())
             JPicker(doc: doc, path: ["hero", "mobileRatio"], label: "Phone ratio", options: [("full", "Fullscreen")] + SiteOptions.ratios.dropFirst())
@@ -235,7 +245,7 @@ struct PageFields: View {
                  caption: { card in (card["hidden"]?.bool == true ? "Hidden · " : "") + (card["id"]?.string ?? "") }) { card in
             JToggle(doc: doc, path: card + ["hidden"], label: "Hide on Home")
             JTextField(doc: doc, path: card + ["category"], label: "Category", placeholder: "ip")
-            JTextField(doc: doc, path: card + ["id"], label: "Original", placeholder: "wonni-sooni")
+            JTextField(doc: doc, path: card + ["id"], label: "Original", placeholder: "my-original")
         }
     }
 
@@ -304,7 +314,7 @@ struct PageFields: View {
     @ViewBuilder private var navbar: some View {
         InspectorGroup(title: "Site") {
             JTextField(doc: doc, path: ["name"], label: "Name")
-            JTextField(doc: doc, path: ["tagline"], label: "Tagline")
+            JTextField(doc: doc, path: ["tagline"], label: "Tagline", placeholder: "A short line about you or a motto (optional)")
         }
         InspectorGroup(title: "Fonts") {
             JPicker(doc: doc, path: ["fontFamily"], label: "Font", options: SiteOptions.fonts)
@@ -320,23 +330,9 @@ struct PageFields: View {
             JColorField(doc: doc, path: ["navBehindBgColor"], label: "Behind the bar")
         }
         InspectorGroup(title: "Menu") {
-            ForEach([("/about", "About"), ("/projects", "Projects"), ("/originals", "Originals"), ("/blog", "Blog"), ("/contacts", "Contacts")], id: \.0) { path, title in
-                let hidden = doc.root["hiddenBuiltinNav"]?.array?.contains(.string(path)) == true
-                Toggle(title, isOn: Binding(get: { !hidden }, set: { on in
-                    var list = doc.root["hiddenBuiltinNav"]?.array ?? []
-                    list.removeAll { $0 == .string(path) }
-                    if !on { list.append(.string(path)) }
-                    doc.set(["hiddenBuiltinNav"], .array(list), name: "Menu")
-                }))
-                .toggleStyle(.checkbox)
-            }
-        }
-        ItemList(doc: doc, path: ["navCustomItems"], title: "Extra menu items", noun: "Item",
-                 newItem: .object([("label", .string("")), ("path", .string(""))]),
-                 caption: { $0["label"]?.string ?? "" }) { item in
-            JTextField(doc: doc, path: item + ["label"], label: "Label")
-            JTextField(doc: doc, path: item + ["path"], label: "Path", placeholder: "/ig")
-            JTextField(doc: doc, path: item + ["href"], label: "Goes to", placeholder: "https://instagram.com/… (optional)")
+            Text("The menu’s items — order, names, links — and which parts of the site exist are set in Site Structure.")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Button("Open Site Structure") { model.open("structure") }.controlSize(.small)
         }
         InspectorGroup(title: "Contents bar", defaultOpen: false) {
             JToggle(doc: doc, path: ["tocEnabled"], label: "Show it on project and original pages")
@@ -361,7 +357,7 @@ struct PageFields: View {
             JToggle(doc: doc, path: ["footerLogoHideHome"], label: "Hide it on Home")
         }
         InspectorGroup(title: "Text") {
-            JTextField(doc: doc, path: ["footerTagline"], label: "Tagline", typography: true)
+            JTextField(doc: doc, path: ["footerTagline"], label: "Tagline", placeholder: "Empty: the site’s tagline (Navbar ▸ Site)", typography: true)
             JColorField(doc: doc, path: ["footerTaglineColor"], label: "Tagline color")
             JToggle(doc: doc, path: ["footerTaglineHidden"], label: "Hide the tagline")
             JTextField(doc: doc, path: ["footerLangText"], label: "Language label")
@@ -405,8 +401,11 @@ struct PageFields: View {
             JToggle(doc: doc, path: ["maintenance"], label: "Site is under maintenance (visitors see this page)")
             JTextField(doc: doc, path: ["maintenanceTitle"], label: "Title", typography: true)
             JRichTextField(doc: doc, path: ["maintenanceDesc"], label: "Message")
-            ImagePathSlot(model: model, doc: doc, path: ["maintenanceImage"], label: "Image", target: "/maintenance")
+            ImagePathSlot(model: model, doc: doc, path: ["maintenanceImage"], label: "Image", target: "/maintenance", ratio: ImageRatio.text("full"))
             JTextField(doc: doc, path: ["maintenancePassword"], label: "Password", placeholder: "Lets you in while it’s on")
+        }
+        InspectorGroup(title: "AI crawlers") {
+            AICrawlerToggle(model: model, doc: doc)
         }
     }
 
@@ -414,7 +413,7 @@ struct PageFields: View {
         InspectorGroup(title: "404 page") {
             JTextField(doc: doc, path: ["notFoundTitle"], label: "Title", typography: true)
             JRichTextField(doc: doc, path: ["notFoundDesc"], label: "Message")
-            ImagePathSlot(model: model, doc: doc, path: ["notFoundImage"], label: "Image", target: "/assets/not-found")
+            ImagePathSlot(model: model, doc: doc, path: ["notFoundImage"], label: "Image", target: "/assets/not-found", ratio: ImageRatio.text("full"))
         }
     }
 
@@ -645,9 +644,15 @@ struct HomeCardFields: View {
         JStyledText(doc: doc, path: item + ["tagline"], label: "Tagline", rich: true, scope: scope)
         JLengthField(doc: doc, path: item + [scope == .mobile ? "taglineTopMobile" : "taglineTop"], label: "Tagline top",
                      placeholder: scope == .mobile ? "Same" : "Bottom", hint: "From the top, e.g. 40px or 30%; empty keeps it at the bottom")
-        ImagePathSlot(model: model, doc: doc, path: item + ["image"], label: "Image", target: image)
-        ImagePathSlot(model: model, doc: doc, path: item + ["tabletImage"], label: "Tablet image", target: image + "-tablet", optional: true)
-        ImagePathSlot(model: model, doc: doc, path: item + ["mobileImage"], label: "Phone image", target: image + "-mobile", optional: true)
+        // The row's shape (Home.jsx: Featured 16:9, grid rows 5:4 unless set).
+        let row = featured ? doc.root["featuredSection"] : doc.root[path: Array(item.dropLast(2))]
+        let fallback = featured ? "16/9" : "5/4"
+        ImagePathSlot(model: model, doc: doc, path: item + ["image"], label: "Image", target: image,
+                      ratio: ImageRatio.text(row?["desktopRatio"]?.string ?? fallback))
+        ImagePathSlot(model: model, doc: doc, path: item + ["tabletImage"], label: "Tablet image", target: image + "-tablet", optional: true,
+                      ratio: ImageRatio.text(row?["tabletRatio"]?.string ?? row?["mobileRatio"]?.string ?? fallback, width: 1600))
+        ImagePathSlot(model: model, doc: doc, path: item + ["mobileImage"], label: "Phone image", target: image + "-mobile", optional: true,
+                      ratio: ImageRatio.text(row?["mobileRatio"]?.string ?? fallback, width: 1200))
         JToggle(doc: doc, path: item + ["nativeSize"], label: "Show at its own pixel size (no scaling)")
         JToggle(doc: doc, path: item + ["hideOnMobile"], label: "Hide the image on phones")
         if inset { JColorField(doc: doc, path: item + ["bgColor"], label: "Background", placeholder: "Row’s") }

@@ -158,7 +158,7 @@ struct GoToPalette: View {
             },
         ] + EditorModel.Device.allCases.map { d in
             Item(id: "device-\(d.rawValue)", group: .actions, title: "Preview: \(d.label)", detail: "", symbol: d.symbol) { model.device = d }
-        } + EditorModel.languages.map { code, label in
+        } + (model.languages.count > 1 ? model.languages : []).map { code, label in
             Item(id: "lang-\(code)", group: .actions, title: "Language: \(label)", detail: "", symbol: "globe") { model.setLanguage(code) }
         }
         let matchingActions = q.isEmpty ? Array(actions.prefix(3)) : actions.filter { matches($0.title) }

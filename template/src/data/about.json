@@ -1,0 +1,17 @@
+{
+  "intro": {
+    "title": "About",
+    "description": "Write a short introduction about yourself.",
+    "profileImage": ""
+  },
+  "sections": [],
+  "photos": {
+    "heading": "",
+    "items": []
+  },
+  "resume": {
+    "name": "",
+    "subtitle": "",
+    "sections": []
+  }
+}

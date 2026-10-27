@@ -83,6 +83,16 @@ final class GitHubClient {
         try await json("GET", "/user")["login"] as? String ?? "?"
     }
 
+    /// Who commits as this account: its name, and GitHub's no-reply address
+    /// for it (always linked to the account, so Vercel accepts the commits).
+    func commitIdentity() async throws -> (name: String, email: String) {
+        let u = try await json("GET", "/user")
+        let login = u["login"] as? String ?? "profolio"
+        let id = (u["id"] as? NSNumber)?.stringValue ?? ""
+        let name = (u["name"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? login
+        return (name, id.isEmpty ? "\(login)@users.noreply.github.com" : "\(id)+\(login)@users.noreply.github.com")
+    }
+
     /// A new repository of the signed-in user, started with a README so it
     /// has a branch to build on. Returns its owner and name.
     func createRepository(name: String, isPrivate: Bool, description: String) async throws -> (owner: String, name: String, branch: String) {

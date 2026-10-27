@@ -1,0 +1,46 @@
+[
+  {
+    "id": "sample-project",
+    "category": "work",
+    "title": "Sample Project",
+    "description": "",
+    "year": 2026,
+    "order": 1,
+    "overview": "",
+    "sections": [],
+    "tags": []
+  },
+  {
+    "id": "brand-identity",
+    "category": "work",
+    "title": "Brand Identity",
+    "description": "",
+    "year": 2026,
+    "order": 2,
+    "overview": "",
+    "sections": [],
+    "tags": []
+  },
+  {
+    "id": "mobile-app",
+    "category": "work",
+    "title": "Mobile App",
+    "description": "",
+    "year": 2026,
+    "order": 3,
+    "overview": "",
+    "sections": [],
+    "tags": []
+  },
+  {
+    "id": "side-project",
+    "category": "personal",
+    "title": "Side Project",
+    "description": "",
+    "year": 2026,
+    "order": 4,
+    "overview": "",
+    "sections": [],
+    "tags": []
+  }
+]

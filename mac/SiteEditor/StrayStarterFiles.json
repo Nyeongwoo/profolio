@@ -1,0 +1,150 @@
+{
+  "note": "Files the 1.6.0 and 1.7.0 starters put into new sites by mistake (Profolio's app zips, this site's Lab pieces, its maintenance picture), by path \u2192 git blob ids. Update Site removes a site's copy only when it is exactly one of these.",
+  "files": {
+    "public/lab/doaa/data.js": [
+      "52e4730f4a08ea1397463951d12b4842e0ba6bfa"
+    ],
+    "public/lab/doaa/doaa.js": [
+      "79d6e31777f8085bebe856eb382875a65d3cc72c"
+    ],
+    "public/lab/doaa/effects.json": [
+      "daf0f5e0f37dcd7597c45977c3f78c542e06c128"
+    ],
+    "public/lab/doaa/figures/area-korea.svg": [
+      "1eedb6eb0152e81ce3cf08c61f303a8668510df9"
+    ],
+    "public/lab/doaa/figures/area-us.svg": [
+      "1f4d868259c818d7ec2e4df6f722b59d1eca1834"
+    ],
+    "public/lab/doaa/figures/bars.svg": [
+      "7d1e4b03b4bf3bbf737159849a3dd94405a9d54e"
+    ],
+    "public/lab/doaa/figures/blob-all.svg": [
+      "2596f4e85b1e4a220b6514e5921ac411201bc8d9"
+    ],
+    "public/lab/doaa/figures/blob-asian.svg": [
+      "155c9f89baabfbd7765de9de2c4e9142a7be36eb"
+    ],
+    "public/lab/doaa/figures/blob-black.svg": [
+      "817cd82c121dc1310fd70afdadafd4f468a45969"
+    ],
+    "public/lab/doaa/figures/blob-hispanic.svg": [
+      "8a194e277271786943f1df363aff5894fa3b8bd6"
+    ],
+    "public/lab/doaa/figures/blob-white.svg": [
+      "aa6d91b691ec05c2c0ec7cf3333f0099c6153177"
+    ],
+    "public/lab/doaa/figures/dot-filled.svg": [
+      "9c60c5c2f767fc45065c7532162c1421e01f08ca"
+    ],
+    "public/lab/doaa/figures/dot-hollow.svg": [
+      "2960fea6eca1a575704b91760fd2f5517b085a7f"
+    ],
+    "public/lab/doaa/figures/dotted-65.svg": [
+      "89dd7a77bb5fe90bd5afd02153c9a3fef1b1a555"
+    ],
+    "public/lab/doaa/figures/line-chart.svg": [
+      "f0bbbd193eb37431c1cb3a37f78b27a94d9e6c61"
+    ],
+    "public/lab/doaa/index.html": [
+      "7b53dca7194410119de627a16bfbffe0c871241f"
+    ],
+    "public/lab/doaa/models/arm.webp": [
+      "e308b473e256d35b632cbea0f856acff3bfad142"
+    ],
+    "public/lab/doaa/models/card.webp": [
+      "990888af5b8dbe927ea2c42dd544e952ae2951bc"
+    ],
+    "public/lab/doaa/models/chat.webp": [
+      "39960b6e24456ca3d8e857a0157687fb26993649"
+    ],
+    "public/lab/doaa/models/companion.webp": [
+      "8d7ff466baaa003d33b0d54e48d134d5494b060c"
+    ],
+    "public/lab/doaa/models/delivery.webp": [
+      "2caaad63c6919ff49167d7492685bb9adf87340c"
+    ],
+    "public/lab/doaa/models/lamp.webp": [
+      "516eae905898705d303bcb4ed8400f7c1cfb5bf7"
+    ],
+    "public/lab/doaa/models/laptop.webp": [
+      "e22553549373fd06c17e92260bba3a997aac1243"
+    ],
+    "public/lab/doaa/models/medkit.webp": [
+      "0107a2b2d83a6f45d583cb95cd3f86d9fd786e8e"
+    ],
+    "public/lab/doaa/models/phone.webp": [
+      "0891b3e55798f0ea241334b96e49358db458417c"
+    ],
+    "public/lab/doaa/models/seal.webp": [
+      "6cf084d33ae92f08df93aa97c1dac84ff568e9cd"
+    ],
+    "public/lab/doaa/models/social.webp": [
+      "c5fda0b922bf9aae2f2010a92985122ab4c25985"
+    ],
+    "public/lab/doaa/models/speaker.webp": [
+      "2bb2aab0bb905165e80a1b874e92f22faf7b896b"
+    ],
+    "public/lab/doaa/models/tablet.webp": [
+      "b016caa2f9df2255258ffc2677b407e5e081da0f"
+    ],
+    "public/lab/doaa/models/tv.webp": [
+      "b2446dc3780ab64eb2489d9d40dc72cc7ef7b2f2"
+    ],
+    "public/lab/doaa/models/vacuum.webp": [
+      "a75f05a865cc2e51cedc00ee2f0db81b42a0b211"
+    ],
+    "public/lab/doaa/models/video.webp": [
+      "e59616fca88ac0075b32321e786fadb1f75dc459"
+    ],
+    "public/lab/doaa/models/wearable.webp": [
+      "98038592a4cb3dc1d0a4f664cc2f96381aca76c8"
+    ],
+    "public/lab/doaa/style.css": [
+      "9155b27cbfd8bf6e2c7f9e445eee22bd74f573cc"
+    ],
+    "public/lab/doaa/title.svg": [
+      "7163354d3a1fbd80a57da11a160c58b9f7d80da8"
+    ],
+    "public/lab/doaa/tree.js": [
+      "54ac95b67e78940578424f50fa93a455f1214f59"
+    ],
+    "public/lab/doaa/tree.svg": [
+      "420a6645d3494e1657f8512e71f18756f1e83ed0"
+    ],
+    "public/maintenance.png": [
+      "c5381ca014fbe222dc53721712ba89d15a911bfa"
+    ],
+    "public/profolio/Profolio-1.5.10.html": [
+      "b82976c4bcb1764a0a0d0b75a3648f65fffe5070"
+    ],
+    "public/profolio/Profolio-1.5.10.zip": [
+      "eb33c636cc0d9ac1e931d8f6d91ad82b93b8dd42"
+    ],
+    "public/profolio/Profolio-1.5.8.html": [
+      "2b99a405c6e07ade94ee192ca887e89350ecc150"
+    ],
+    "public/profolio/Profolio-1.5.8.zip": [
+      "55b3a5774b0b2bba5f49204012fc0e6b102d5f6a"
+    ],
+    "public/profolio/Profolio-1.5.9.html": [
+      "0088b76fb3f907bdbd9d857a94d9d7d85441dcff"
+    ],
+    "public/profolio/Profolio-1.5.9.zip": [
+      "c858e83eeba2cdc688ddb2da4fc65984cdfd7595"
+    ],
+    "public/profolio/Profolio-1.6.0.html": [
+      "85dd8db82fc62dbf1d905b61aae5c933bbcc92a4"
+    ],
+    "public/profolio/Profolio-1.6.0.zip": [
+      "25bc9ba0d66b6b8f788bd9a47d78081f72dd247c"
+    ],
+    "public/profolio/appcast.xml": [
+      "7890ab00e652059d9f128207f920321030ae39b4",
+      "975ebe80e6153af2dfbbd2efaba92aa0765385ee"
+    ],
+    "public/profolio/install.sh": [
+      "225243378d837509bebc9cf8ce5e54e8ab65adeb"
+    ]
+  }
+}

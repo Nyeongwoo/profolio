@@ -50,7 +50,7 @@ struct PublishSheet: View {
                 progressView
             } else {
                 changeList
-                TextField("Note (optional) — e.g. Updated Maizy research", text: $note)
+                TextField("Note (optional) — e.g. Updated the About page", text: $note)
                     .textFieldStyle(.roundedBorder)
             }
 

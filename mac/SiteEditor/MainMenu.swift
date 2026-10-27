@@ -34,6 +34,9 @@ enum MainMenu {
             item("Go to…", #selector(EditorWindowController.showGoTo(_:)), "k"),
             item("Save", #selector(EditorWindowController.saveEdits(_:)), "s"),
             item("Publish…", #selector(EditorWindowController.showPublish(_:)), "p", [.command, .shift]),
+            item("Update Site…", #selector(EditorWindowController.updateSite(_:))),
+            item("Coding Agents…", #selector(EditorWindowController.showCodingAgents(_:))),
+            item("Connect Domain…", #selector(EditorWindowController.connectDomain(_:))),
             item("Backups…", #selector(EditorWindowController.showBackups(_:)), "b", [.command, .shift]),
             .separator(),
             item("Close", #selector(NSWindow.performClose(_:)), "w"),
@@ -75,6 +78,7 @@ enum MainMenu {
         NSApp.windowsMenu = window
 
         NSApp.helpMenu = main.addSubmenu("Help", [
+            item("Profolio Tour", #selector(EditorWindowController.showTutorial(_:))),
             item("Send Feedback…", #selector(AppDelegate.sendFeedback(_:))),
         ])
         return main

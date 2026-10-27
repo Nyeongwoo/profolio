@@ -3,7 +3,7 @@
 Profolio is a Mac editor for portfolio websites. You edit, preview and publish in one window.
 
 ## The pieces
-- **The project file** (`.portfolio`): a package, usually in iCloud Drive, holding your site's content, images, Lab pieces and backups. Open it with File ▸ Open… or by double-clicking it.
+- **The project file** (`.profolio`; sites made before Profolio 2.0 are `.portfolio`, and open the same way): a package, usually in iCloud Drive, holding your site's content, images, Lab pieces and backups. Open it with File ▸ Open… or by double-clicking it.
 - **GitHub**: where your site's files live online. Profolio publishes straight to your GitHub repository.
 - **Vercel**: builds the site from GitHub and serves it at your address. Every Publish triggers a new deploy.
 

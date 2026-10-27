@@ -1,213 +1,20 @@
 {
-  "fill" : {
-    "linear-gradient" : [
-      "display-p3:0.45044,0.64453,0.97803,1.00000",
-      "display-p3:0.30615,0.49731,1.00000,1.00000"
-    ]
-  },
+  "fill" : "automatic",
   "groups" : [
     {
       "layers" : [
         {
           "fill" : {
-            "linear-gradient" : [
-              "display-p3:0.95379,1.00000,0.99332,1.00000",
-              "display-p3:0.43366,0.63900,1.00000,1.00000"
-            ],
-            "orientation" : {
-              "start" : {
-                "x" : 0,
-                "y" : -0.8705747638110225
-              },
-              "stop" : {
-                "x" : 0.5,
-                "y" : 6.796407792240326
-              }
-            }
+            "solid" : "extended-gray:1.00000,0.90000"
           },
-          "glass" : true,
-          "image-name" : "Roll.svg",
-          "name" : "Roll",
-          "position" : {
-            "scale" : 1.8,
-            "translation-in-points" : [
-              -65.70102000000009,
-              -269.1167
-            ]
-          }
-        },
-        {
-          "fill" : {
-            "linear-gradient" : [
-              "display-p3:0.93769,1.00000,0.98063,1.00000",
-              "display-p3:0.22513,0.29255,0.62670,1.00000"
-            ],
-            "orientation" : {
-              "start" : {
-                "x" : -0.44758731261684304,
-                "y" : -0.2885079834394774
-              },
-              "stop" : {
-                "x" : 0.5000000000000013,
-                "y" : 2.9903284756902635
-              }
-            }
-          },
-          "glass" : false,
-          "image-name" : "Handle.svg",
-          "name" : "Handle",
-          "position" : {
-            "scale" : 1.8,
-            "translation-in-points" : [
-              -64.54999313354904,
-              205.28330000000005
-            ]
-          }
-        },
-        {
-          "fill" : {
-            "linear-gradient" : [
-              "display-p3:0.94206,1.00000,0.98908,1.00000",
-              "display-p3:0.46979,0.56783,0.90835,1.00000"
-            ],
-            "orientation" : {
-              "start" : {
-                "x" : 0,
-                "y" : -0.027776767107795038
-              },
-              "stop" : {
-                "x" : 1.7760659564136763,
-                "y" : 2.075657068085006
-              }
-            }
-          },
-          "glass" : true,
-          "image-name" : "P-Shape.svg",
-          "name" : "P-Shape",
-          "position" : {
-            "scale" : 1.8,
-            "translation-in-points" : [
-              21.598799999999983,
-              11.683300000000031
-            ]
-          }
-        },
-        {
-          "fill" : {
-            "linear-gradient" : [
-              "display-p3:0.95686,1.00000,1.00000,0.80000",
-              "display-p3:0.60000,0.78431,0.96471,1.00000"
-            ],
-            "orientation" : {
-              "start" : {
-                "x" : 0.6389336441465981,
-                "y" : -0.04012259866176224
-              },
-              "stop" : {
-                "x" : -0.06012388601765634,
-                "y" : 1.4949943027795658
-              }
-            }
-          },
-          "glass" : false,
           "hidden" : true,
-          "image-name" : "Subtract.svg",
-          "name" : "Subtract",
+          "image-name" : "Vector 34378.svg",
+          "name" : "Vector 34378",
           "position" : {
-            "scale" : 2.4,
+            "scale" : 1,
             "translation-in-points" : [
-              0.5711999999999193,
-              -4.2349999999999
-            ]
-          }
-        },
-        {
-          "fill" : {
-            "solid" : "display-p3:0.87487,0.93008,1.00000,1.00000"
-          },
-          "glass" : false,
-          "hidden" : true,
-          "image-name" : "Subtract.svg",
-          "name" : "Subtract",
-          "position" : {
-            "scale" : 2.4,
-            "translation-in-points" : [
-              0.5711999999999193,
-              -4.2349999999999
-            ]
-          }
-        },
-        {
-          "fill" : {
-            "solid" : "display-p3:0.87451,0.92941,1.00000,1.00000"
-          },
-          "glass" : true,
-          "hidden" : true,
-          "image-name" : "Subtract.svg",
-          "name" : "Subtract",
-          "position" : {
-            "scale" : 2.4,
-            "translation-in-points" : [
-              0.5711999999999193,
-              -4.2349999999999
-            ]
-          }
-        },
-        {
-          "fill" : {
-            "linear-gradient" : [
-              "display-p3:0.83302,0.88211,0.95676,0.80000",
-              "srgb:0.60000,0.78431,0.96471,1.00000"
-            ],
-            "orientation" : {
-              "start" : {
-                "x" : 0.5,
-                "y" : 0
-              },
-              "stop" : {
-                "x" : -0.667183713694292,
-                "y" : 1.5439402145021897
-              }
-            }
-          },
-          "glass" : false,
-          "hidden" : true,
-          "image-name" : "P.svg",
-          "name" : "P",
-          "position" : {
-            "scale" : 2.4,
-            "translation-in-points" : [
-              22.168799999999976,
-              0.8363999999999123
-            ]
-          }
-        },
-        {
-          "fill" : {
-            "linear-gradient" : [
-              "display-p3:0.20344,0.34788,0.53950,1.00000",
-              "display-p3:0.54646,0.65862,0.98717,1.00000"
-            ],
-            "orientation" : {
-              "start" : {
-                "x" : -0.31268138315504107,
-                "y" : -0.29800575361277154
-              },
-              "stop" : {
-                "x" : 1.1032098661704497,
-                "y" : 1.2407750263846469
-              }
-            }
-          },
-          "glass" : true,
-          "hidden" : true,
-          "image-name" : "P.svg",
-          "name" : "P",
-          "position" : {
-            "scale" : 2.2,
-            "translation-in-points" : [
-              22.121299999999906,
-              11.999999999999943
+              29.25,
+              0.25
             ]
           }
         },
@@ -215,7 +22,7 @@
           "fill" : {
             "solid" : "display-p3:0.27777,0.36789,0.53885,0.00000"
           },
-          "hidden" : false,
+          "hidden" : true,
           "image-name" : "Ellipse 1 2.png",
           "name" : "Ellipse 1 2",
           "position" : {
@@ -231,7 +38,7 @@
             "solid" : "display-p3:0.33232,0.46726,0.71063,0.57236"
           },
           "glass" : true,
-          "hidden" : false,
+          "hidden" : true,
           "image-name" : "Ellipse 1 2.png",
           "name" : "Ellipse 1 2",
           "position" : {
@@ -259,7 +66,7 @@
               }
             }
           },
-          "hidden" : false,
+          "hidden" : true,
           "image-name" : "Rectangle 4 2.png",
           "name" : "Rectangle 4 2",
           "position" : {
@@ -274,7 +81,7 @@
           "fill" : {
             "solid" : "display-p3:0.14966,0.19714,0.61914,1.00000"
           },
-          "hidden" : false,
+          "hidden" : true,
           "image-name" : "Rectangle 4 2.png",
           "name" : "Rectangle 4 2",
           "position" : {
@@ -298,7 +105,41 @@
     },
     {
       "layers" : [
-
+        {
+          "fill" : {
+            "linear-gradient" : [
+              "display-p3:0.04000,0.04000,0.04000,1.00000",
+              "display-p3:0.13975,0.13975,0.13975,1.00000"
+            ]
+          },
+          "hidden" : true,
+          "image-name" : "Vector 34378.svg",
+          "name" : "Vector 34378",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              29.25,
+              0.25
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "linear-gradient" : [
+              "display-p3:0.06075,0.06315,0.06217,1.00000",
+              "display-p3:0.22752,0.22930,0.23386,1.00000"
+            ]
+          },
+          "image-name" : "Vector 34379.svg",
+          "name" : "Vector 34379",
+          "position" : {
+            "scale" : 1.02,
+            "translation-in-points" : [
+              6.920000000000016,
+              0.25499999999999545
+            ]
+          }
+        }
       ],
       "shadow" : {
         "kind" : "neutral",

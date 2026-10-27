@@ -31,6 +31,8 @@ struct LabSidebarSection: View {
                 Spacer()
                 Button { if let slug = lab.newPiece() { model.open("lab:\(slug)") } } label: { Image(systemName: "plus") }
                     .buttonStyle(.borderless)
+                    // In line with the rows' counts, not against the edge.
+                    .padding(.trailing, 10)
                     .help("New lab piece")
             }
         }
@@ -193,7 +195,7 @@ struct LabChat: View {
     var body: some View {
         ChatPanel(lab: lab, scope: lab.slug ?? "", title: "Claude",
                   subtitle: "Changes public/lab/\(lab.slug ?? "") — the preview follows",
-                  hint: "Ask for a change — “make the leaves sway more”, “add a title above the grid” — or ask it to publish.",
+                  hint: "Ask for a change — “make the shapes move slower”, “add a title above the grid” — or ask it to publish.",
                   placeholder: "Ask Claude to change this piece…", showsPick: true)
             .id(lab.slug ?? "")
     }

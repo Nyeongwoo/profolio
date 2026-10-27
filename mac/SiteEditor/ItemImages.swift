@@ -21,37 +21,50 @@ struct ItemImages: View {
     private var assets: URL? { model.document.packageURL?.appendingPathComponent("site/public/assets/\(plural)") }
     private var folder: URL? { assets?.appendingPathComponent("\(category)/\(itemID)") }
 
+    /// All Projects / All Originals' card shape (its Layout settings).
+    private var gridRatio: String {
+        let key = type == "project" ? "allProjectsImageRatio" : "allOriginalsImageRatio"
+        return ImageRatio.text(model.sideDocument("src/data/siteConfig.json")?.root[key]?.string ?? "16/9", width: 1600)
+    }
+
     var body: some View {
         InspectorGroup(title: "Images") {
             Text("Drop an image on a slot, or click Choose. PNGs are saved as WebP.")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            slot("Hero", hint: "Top of the \(type) page", file: heroFile(mobile: false), remove: nil) { setHero($0, mobile: false) }
+            slot("Hero", hint: "Top of the \(type) page", ratio: ImageRatio.text("16/9"), file: heroFile(mobile: false), remove: nil) { setHero($0, mobile: false) }
             if type == "project" {
                 ImagePathSlot(model: model, doc: doc, path: ["heroTabletImage"], label: "Hero (tablet)",
-                              target: "/assets/projects/\(category)/\(itemID)/hero-tablet", optional: true)
+                              target: "/assets/projects/\(category)/\(itemID)/hero-tablet", optional: true, ratio: ImageRatio.text("5/4", width: 1600))
                 let mobile = heroFile(mobile: true)
-                slot("Hero (phone)", hint: "Optional; phones use the hero otherwise", file: mobile,
+                slot("Hero (phone)", hint: "Optional; phones use the hero otherwise", ratio: ImageRatio.text("5/4", width: 1200), file: mobile,
                      remove: mobile == nil ? nil : { removeMobileHero() }) { setHero($0, mobile: true) }
             }
             Divider()
-            slot("Grid", hint: "Card on All \(plural.capitalized)", file: find(in: "all-thumbnails", "\(category)-\(itemID)"), remove: nil) {
+            slot("Grid", hint: "Card on All \(plural.capitalized)", ratio: gridRatio, file: find(in: "all-thumbnails", "\(category)-\(itemID)"), remove: nil) {
                 upload($0, to: "/api/all-thumbnail/\(plural)/\(category)/\(itemID)", slot: "main")
             }
             let hover = find(in: "all-thumbnails", "\(category)-\(itemID)-hover")
-            slot("Grid hover", hint: "Optional; shown when the pointer is over the card", file: hover,
+            slot("Grid hover", hint: "Optional; shown when the pointer is over the card", ratio: gridRatio, file: hover,
                  remove: hover.map { f in { removeFile(f) } }) {
                 upload($0, to: "/api/all-thumbnail/\(plural)/\(category)/\(itemID)", slot: "hover")
             }
             slot("Category icon", hint: "In the row at the top of the \(category.capitalized) page; a GIF can move",
+                 ratio: ImageRatio.text("1/1", width: 600) + ", transparent background works",
                  file: find(in: "icon-thumbnails", "\(category)-\(itemID)"), remove: nil) {
                 upload($0, to: "/api/thumbnail/\(plural)/\(category)/\(itemID)", slot: "main")
+            }
+            let iconHover = find(in: "icon-thumbnails", "\(category)-\(itemID)-hover")
+            slot("Category icon hover", hint: "Optional; shown when the pointer is over the icon",
+                 ratio: ImageRatio.text("1/1", width: 600), file: iconHover,
+                 remove: iconHover.map { f in { removeFile(f) } }) {
+                upload($0, to: "/api/thumbnail/\(plural)/\(category)/\(itemID)", slot: "hover")
             }
             if let error { Text(error).font(.caption).foregroundStyle(.red) }
         }
     }
 
     @ViewBuilder
-    private func slot(_ label: String, hint: String, file: URL?, remove: (() -> Void)?, set: @escaping (URL) -> Void) -> some View {
+    private func slot(_ label: String, hint: String, ratio: String = "", file: URL?, remove: (() -> Void)?, set: @escaping (URL) -> Void) -> some View {
         HStack(alignment: .center, spacing: 10) {
             Thumbnail(url: file, size: 56)
                 .id("\(file?.path ?? label)#\(revision)")
@@ -68,6 +81,7 @@ struct ItemImages: View {
                 Text(label).font(.callout.weight(.medium))
                 Text(file?.lastPathComponent ?? "None").font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                     .help(hint)
+                if !ratio.isEmpty { Text("Recommended \(ratio)").font(.caption2).foregroundStyle(.tertiary) }
                 HStack(spacing: 6) {
                     Button("Choose…") { choose(set) }.controlSize(.small)
                     if let remove { Button("Remove", action: remove).controlSize(.small) }

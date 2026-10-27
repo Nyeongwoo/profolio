@@ -36,6 +36,8 @@ main() {
   git -C "$ROOT" pull --autostash --quiet
 
   VERSION=$(grep -m1 'MARKETING_VERSION' "$PROJECT/project.pbxproj" | sed -E 's/.*= ([^;]+);/\1/')
+  echo "Building the starter site…"
+  node "$ROOT/scripts/build-starter.js"
   echo "Building Profolio $VERSION…"
   LOG=$(mktemp -t profolio-build)
   if ! xcodebuild -project "$PROJECT" -scheme SiteEditor -configuration Release -derivedDataPath "$DERIVED" build > "$LOG" 2>&1; then
@@ -49,8 +51,9 @@ main() {
   ditto "$DERIVED/Build/Products/Release/Profolio.app" /Applications/Profolio.app
 
   if [[ -n $PKG ]]; then
-    [[ -d $ROOT/node_modules ]] || (cd "$ROOT" && npm install --silent)
-    node "$ROOT/scripts/siteproj.js" editor "$PKG"
+    # The package's editor is built from the template's code (build-starter
+    # above installed its packages).
+    node "$ROOT/template/scripts/siteproj.js" editor "$PKG"
     mkdir -p "${REMEMBER:h}"
     print -r -- "$PKG" > "$REMEMBER"
   else

@@ -7,7 +7,7 @@ struct NewItemSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     enum Kind: String, CaseIterable, Identifiable {
-        case project = "Project", original = "Original", post = "Blog post", category = "Category"
+        case page = "Page", project = "Project", original = "Original", post = "Blog post", category = "Category"
         var id: String { rawValue }
     }
 
@@ -28,7 +28,7 @@ struct NewItemSheet: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("New").font(.headline)
             Picker("Kind", selection: $kind) {
-                ForEach(Kind.allCases) { Text($0.rawValue).tag($0) }
+                ForEach(kinds) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -36,7 +36,7 @@ struct NewItemSheet: View {
             Form {
                 switch kind {
                 case .project, .original:
-                    TextField("Name", text: $title, prompt: Text(kind == .project ? "e.g. Maizy" : "e.g. Wonni & Sooni"))
+                    TextField("Name", text: $title, prompt: Text(kind == .project ? "e.g. Desk Lamp" : "e.g. Sketchbook"))
                     Picker("Category", selection: $category) {
                         ForEach(categories, id: \.self) { Text($0.capitalized).tag($0) }
                         Divider()
@@ -46,6 +46,14 @@ struct NewItemSheet: View {
                         TextField("New category", text: $newCategory, prompt: Text("lowercase, e.g. furniture"))
                     }
                     slugField
+                case .page:
+                    TextField("Name", text: $title, prompt: Text("e.g. Research"))
+                    TextField("Address", text: Binding(get: { slug }, set: { slug = $0; slugEdited = true }),
+                              prompt: Text("letters, numbers and -"))
+                        .help("The page’s address, e.g. /\(slug.isEmpty ? "research" : slug) — it goes in the menu too")
+                    if Self.reserved.contains(slug) {
+                        Text("/\(slug) is one of the site’s own addresses. Pick another.").font(.caption).foregroundStyle(.red)
+                    }
                 case .post:
                     TextField("Title", text: $title)
                     Picker("Category", selection: $blogCategory) {
@@ -53,17 +61,19 @@ struct NewItemSheet: View {
                     }
                     slugField
                 case .category:
-                    Picker("In", selection: $categoryType) {
-                        Text("Projects").tag("projects")
-                        Text("Originals").tag("originals")
+                    if model.hasPart("originals") {
+                        Picker("In", selection: $categoryType) {
+                            Text("Projects").tag("projects")
+                            Text("Originals").tag("originals")
+                        }
+                        .pickerStyle(.segmented)
                     }
-                    .pickerStyle(.segmented)
                     TextField("Name", text: $newCategory, prompt: Text("lowercase, e.g. furniture"))
                 }
             }
             .formStyle(.grouped)
             .scrollDisabled(true)
-            .frame(height: kind == .category ? 130 : (category == Self.newCategoryTag && kind != .post ? 200 : 168))
+            .frame(height: kind == .category ? 130 : kind == .page ? (Self.reserved.contains(slug) ? 150 : 130) : (category == Self.newCategoryTag && kind != .post ? 200 : 168))
 
             if let error { Text(error).foregroundStyle(.red).font(.callout) }
 
@@ -82,10 +92,17 @@ struct NewItemSheet: View {
         .onChange(of: kind) { if !categories.contains(category) { category = categories.first ?? Self.newCategoryTag } }
     }
 
+    /// Kinds for the parts the site has (Site Structure).
+    private var kinds: [Kind] {
+        Kind.allCases.filter { k in
+            (k != .original || model.hasPart("originals")) && (k != .post || model.hasPart("blog"))
+        }
+    }
+
     private var slugField: some View {
         TextField("Address", text: Binding(get: { slug }, set: { slug = $0; slugEdited = true }),
                   prompt: Text("letters, numbers and -"))
-            .help("The page’s address, e.g. /projects/product/\(slug.isEmpty ? "maizy" : slug)")
+            .help("The page’s address, e.g. /\(kind == .original ? "originals" : "projects")/\(chosenCategory.isEmpty || chosenCategory == Self.newCategoryTag ? "work" : chosenCategory)/\(slug.isEmpty ? "desk-lamp" : slug)")
     }
 
     private var categories: [String] {
@@ -99,9 +116,15 @@ struct NewItemSheet: View {
         switch kind {
         case .project, .original: return !title.trimmingCharacters(in: .whitespaces).isEmpty && ok(slug) && ok(chosenCategory)
         case .post: return !title.trimmingCharacters(in: .whitespaces).isEmpty && ok(slug)
+        case .page: return !title.trimmingCharacters(in: .whitespaces).isEmpty && slug.range(of: "^[a-z0-9-]+$", options: .regularExpression) != nil
+            && !Self.reserved.contains(slug)
         case .category: return newCategory.range(of: "^[a-z0-9-]+$", options: .regularExpression) != nil
         }
     }
+
+    /// Addresses a page can't take (src/utils/pages.js RESERVED_PATHS).
+    static let reserved = Set(["projects", "originals", "blog", "about", "contacts", "archive", "sitemap", "editor", "lab", "profolio", "assets", "api"]
+        + EditorModel.otherLanguageCodes)
 
     static func slugify(_ s: String) -> String {
         let folded = s.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current).lowercased()
@@ -119,6 +142,8 @@ struct NewItemSheet: View {
             let type = kind == .project ? "projects" : "originals"
             if category == Self.newCategoryTag, let e = await model.addCategory(type, newCategory) { error = e; return }
             result = await model.createItem(kind == .project ? "project" : "original", category: chosenCategory, id: slug, title: title)
+        case .page:
+            result = await model.createPage(id: slug, title: title.trimmingCharacters(in: .whitespaces), path: "/\(slug)")
         case .post:
             result = await model.createPost(id: slug, title: title, category: blogCategory)
         case .category:

@@ -17,8 +17,13 @@ struct NewSiteView: View {
     @State private var status = ""
     @State private var error: String?
     @State private var result: SiteCreator.Result?
+    @State private var types: [SiteCreator.SiteType] = []
+    @State private var siteType: SiteCreator.SiteType?
     @State private var presets: [SiteCreator.Preset] = []
     @State private var preset: SiteCreator.Preset?
+    @State private var withOriginals = false
+    @State private var withBlog = false
+    @State private var projectIcons = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -67,14 +72,50 @@ struct NewSiteView: View {
         .task {
             presets = SiteCreator.presets()
             preset = preset ?? presets.first
+            types = SiteCreator.types()
+            siteType = siteType ?? types.first
         }
     }
 
     private var form: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if types.count > 1 { typePicker }
             if !presets.isEmpty { presetPicker }
+            parts
             fields
         }
+    }
+
+    /// Portfolio or Organization (types.json). Choosing one sets the parts
+    /// it starts with; they can still be changed below.
+    private var typePicker: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Kind of site").font(.callout.weight(.medium))
+            HStack(spacing: 10) {
+                ForEach(types) { t in
+                    Button { choose(t) } label: {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Label(t.name, systemImage: t.id == "organization" ? "person.3" : "square.grid.2x2").font(.callout.weight(.medium))
+                            Text(t.description).font(.caption).foregroundStyle(.secondary).lineLimit(2, reservesSpace: true)
+                        }
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Corner.shape(Corner.group).fill(siteType == t ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(0.06)))
+                        .overlay(Corner.shape(Corner.group).strokeBorder(siteType == t ? Color.accentColor : .clear, lineWidth: 2))
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private func choose(_ t: SiteCreator.SiteType) {
+        siteType = t
+        let organization = t.id == "organization"
+        withBlog = organization
+        withOriginals = false
+        projectIcons = !organization
     }
 
     private var presetPicker: some View {
@@ -102,6 +143,20 @@ struct NewSiteView: View {
             }
             Text("You can change all of this later in the inspector.").font(.caption).foregroundStyle(.tertiary)
         }
+    }
+
+    /// What the site starts with (Site Structure; all of it can change later).
+    private var parts: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Your site has").font(.callout.weight(.medium))
+            HStack(spacing: 18) {
+                Toggle("Projects, About, Contacts", isOn: .constant(true)).disabled(true)
+                Toggle("Originals (personal works)", isOn: $withOriginals)
+                Toggle("Blog", isOn: $withBlog)
+            }
+            Toggle("Project icon strip on category pages (off: a card grid)", isOn: $projectIcons)
+        }
+        .toggleStyle(.checkbox)
     }
 
     private var fields: some View {
@@ -135,6 +190,8 @@ struct NewSiteView: View {
                 NSWorkspace.shared.open(URL(string: "https://vercel.com/new/import?s=\(encoded)")!)
             }
             .buttonStyle(.borderedProminent)
+            Text("Later, in the site’s window: File ▸ Connect Domain… puts your own address on it, and File ▸ Coding Agents… lets Claude Code or Codex work on its code and design.")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -167,7 +224,9 @@ struct NewSiteView: View {
         defer { working = false }
         let options = SiteCreator.Options(siteName: siteName.trimmingCharacters(in: .whitespaces),
                                           ownerName: ownerName.trimmingCharacters(in: .whitespaces).isEmpty ? siteName : ownerName,
-                                          repoName: repo, isPrivate: isPrivate, folder: targetFolder, preset: preset)
+                                          repoName: repo, isPrivate: isPrivate, folder: targetFolder,
+                                          siteType: siteType?.id == "portfolio" ? nil : siteType, preset: preset,
+                                          originals: withOriginals, blog: withBlog, projectIcons: projectIcons)
         let creator = SiteCreator(token: token) { message in
             DispatchQueue.main.async { status = message }
         }

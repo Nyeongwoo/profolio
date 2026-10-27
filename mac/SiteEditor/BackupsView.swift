@@ -128,10 +128,10 @@ struct BackupsView: View {
             "src/data/home.json": "Home page", "src/data/about.json": "About page",
             "src/data/siteConfig.json": "Site settings", "src/data/blog.json": "Blog post list",
             "src/data/archive.json": "Archive page", "src/data/projects.json": "Project list",
-            "src/data/originals.json": "Originals list", "src/i18n/ko.json": "Korean translations",
-            "src/i18n/zh.json": "Chinese translations", "public/assets/blog/landing-info.json": "Blog landing",
+            "src/data/originals.json": "Originals list", "public/assets/blog/landing-info.json": "Blog landing",
         ]
         if let name = named[path] { return name }
+        if let code = path.wholeMatch(of: /src\/i18n\/([a-z]+)\.json/)?.1 { return "\(EditorModel.languageName(String(code))) translations" }
         let parts = path.split(separator: "/").map(String.init)
         if parts.count == 6, parts[0] == "public", parts[5] == "info.json" {
             return "\(parts[2] == "originals" ? "Original" : "Project"): \(parts[3]) / \(parts[4])"

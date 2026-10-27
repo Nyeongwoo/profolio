@@ -47,6 +47,8 @@ struct SectionTypeFields: View {
         case "video-background": video
         case "stats": stats
         case "interactive": interactive
+        case "people": people
+        case "recent-posts": recentPosts
         default:
             InspectorGroup(title: "Content") {
                 Text("Unknown section type “\(type)”.").font(.callout).foregroundStyle(.secondary)
@@ -418,6 +420,52 @@ struct SectionTypeFields: View {
         }
     }
 
+    // MARK: People and recent posts (organization sites)
+
+    /// The page's section image folder as a site path ("/assets/pages/x/sections").
+    private var publicFolder: String {
+        guard let folder = model.form?.assets?.folder.path, let r = folder.range(of: "/site/public") else { return "/assets/sections" }
+        return String(folder[r.upperBound...])
+    }
+
+    @ViewBuilder private var people: some View {
+        InspectorGroup(title: "Heading") {
+            LinesEditor(doc: doc, path: p("lines"), legacyPath: base, scope: scope)
+        }
+        InspectorGroup(title: "Layout") {
+            JPicker(doc: doc, path: p("columns"), label: "Columns", options: [("", "4"), ("2", "2"), ("3", "3"), ("5", "5"), ("6", "6")])
+            JTextField(doc: doc, path: p("featuredLabel"), label: "Featured badge", placeholder: "Featured — e.g. Member of the Month")
+        }
+        let sectionID = section?["id"]?.string ?? "people"
+        ItemList(doc: doc, path: p("people"), title: "People", noun: "Person",
+                 newItem: .object([("name", .string("")), ("role", .string("")), ("affiliation", .string("")), ("bio", .string("")),
+                                   ("link", .string("")), ("photo", .string(""))]),
+                 caption: { [$0["name"]?.string, $0["featured"]?.bool == true ? "★" : nil].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " ") }) { item in
+            let index = (item.last as? Int) ?? 0
+            JTextField(doc: doc, path: item + ["name"], label: "Name", placeholder: "Jane Doe")
+            JTextField(doc: doc, path: item + ["role"], label: "Role", placeholder: "President")
+            JTextField(doc: doc, path: item + ["affiliation"], label: "Affiliation", placeholder: "University or company (optional)")
+            JTextField(doc: doc, path: item + ["bio"], label: "Bio", placeholder: "A sentence or two (optional)")
+            JTextField(doc: doc, path: item + ["link"], label: "Link", placeholder: "https://… or /page (optional)")
+            ImagePathSlot(model: model, doc: doc, path: item + ["photo"], label: "Photo",
+                          target: "\(publicFolder)/\(sectionID)-person-\(index + 1)", optional: true, ratio: ImageRatio.text("1/1", width: 800))
+            JToggle(doc: doc, path: item + ["featured"], label: "Featured (shown first, with the badge)")
+            JToggle(doc: doc, path: item + ["hidden"], label: "Hide")
+        }
+    }
+
+    @ViewBuilder private var recentPosts: some View {
+        InspectorGroup(title: "Heading") {
+            LinesEditor(doc: doc, path: p("lines"), legacyPath: base, scope: scope)
+        }
+        InspectorGroup(title: "Posts") {
+            JPicker(doc: doc, path: p("count"), label: "How many", options: [("", "4"), ("3", "3"), ("5", "5"), ("6", "6"), ("8", "8"), ("10", "10")])
+            JPicker(doc: doc, path: p("category"), label: "Category", options: [("", "All")] + model.blogCategories)
+            JToggle(doc: doc, path: p("showDate"), label: "Show dates", defaultOn: true)
+            Text("The newest Blog posts, linked to their pages.").font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
     // MARK: Interactive
 
     @ViewBuilder private var interactive: some View {
@@ -426,7 +474,7 @@ struct SectionTypeFields: View {
             JNumberField(doc: doc, path: p("height"), label: "Height", placeholder: "600", unit: "px")
             JNumberField(doc: doc, path: p("mobileHeight"), label: "Phone height", placeholder: "Same", unit: "px")
             JToggle(doc: doc, path: p("hideOpenLink"), label: "Hide the “Open full screen” link")
-            Text("Lab pieces are code in the site’s git repo; the preview loads them from nnwoo.com.")
+            Text("Lab pieces are code in the site’s git repo; the preview loads them from the published site.")
                 .font(.caption).foregroundStyle(.secondary)
         }
         InspectorGroup(title: "Caption", defaultOpen: section?["lines"] != nil) {

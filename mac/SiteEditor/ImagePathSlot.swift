@@ -6,6 +6,26 @@ import UniformTypeIdentifiers
 /// .png, …), like a profile photo or a hero: shows it, takes a dropped or
 /// chosen file, writes it into the package at `target` (PNG as WebP; the
 /// image it replaces goes to the Trash) and points `path` at it.
+/// How an image slot's recommended shape is shown: "16:9 · e.g. 2400×1350".
+enum ImageRatio {
+    /// `ratio` as the site stores it ("16/9", "5/4", "1/1", "full");
+    /// `portrait`: a full-screen slot on phones (taller than wide).
+    static func text(_ ratio: String?, width: Int = 2400, portrait: Bool = false) -> String {
+        let r = (ratio ?? "").trimmingCharacters(in: .whitespaces)
+        if r.isEmpty || r == "full" {
+            return portrait ? "full screen, about 9:16 · e.g. 1170×2080" : "full screen, about 16:9 · e.g. 2400×1350"
+        }
+        let parts = r.split(whereSeparator: { $0 == "/" || $0 == ":" }).compactMap { Double($0) }
+        guard parts.count == 2, parts[0] > 0, parts[1] > 0 else {
+            if let d = Double(r), d > 0 { return text("\(d)/1", width: width) }
+            return r
+        }
+        let h = Int((Double(width) * parts[1] / parts[0]).rounded())
+        let name = parts.map { $0 == $0.rounded() ? String(Int($0)) : String($0) }.joined(separator: ":")
+        return "\(name)\(parts[0] == parts[1] ? " (square)" : "") · e.g. \(width)×\(h)"
+    }
+}
+
 struct ImagePathSlot: View {
     @ObservedObject var model: EditorModel
     @ObservedObject var doc: ContentDocument
@@ -17,6 +37,8 @@ struct ImagePathSlot: View {
     var hint = ""
     /// Whether it can be cleared (an optional override).
     var optional = false
+    /// The shape the site shows it in (ImageRatio.text), under the name.
+    var ratio = ""
 
     @State private var revision = 0
     @State private var error: String?
@@ -44,6 +66,7 @@ struct ImagePathSlot: View {
                 Text(label).font(.callout.weight(.medium))
                 Text(file?.lastPathComponent ?? (optional ? "None" : "Missing")).font(.caption).foregroundStyle(.secondary)
                     .lineLimit(1).truncationMode(.middle)
+                if !ratio.isEmpty { Text("Recommended \(ratio)").font(.caption2).foregroundStyle(.tertiary) }
                 HStack(spacing: 6) {
                     Button("Choose…") { choose() }.controlSize(.small)
                     if optional && stored != nil { Button("Remove") { clear() }.controlSize(.small) }
@@ -115,6 +138,37 @@ struct PageMaintenanceToggle: View {
             get: { doc.root[path: path]?.bool == true },
             set: { doc.set(path, $0 ? .bool(true) : nil, name: "Page Maintenance") }))
             .toggleStyle(.checkbox)
+    }
+}
+
+/// Asks AI crawlers (GPTBot, ClaudeBot, …) to stay away: the editor API
+/// keeps siteConfig's aiBlockingEnabled and rewrites public/robots.txt.
+struct AICrawlerToggle: View {
+    @ObservedObject var model: EditorModel
+    @ObservedObject var doc: ContentDocument
+    @State private var busy = false
+    @State private var error: String?
+
+    var body: some View {
+        Toggle("Block AI crawlers (robots.txt asks AI bots not to read the site)", isOn: Binding(
+            get: { doc.root["aiBlockingEnabled"]?.bool == true },
+            set: { set($0) }))
+            .toggleStyle(.checkbox)
+            .disabled(busy)
+        Text("Takes effect on the live site once you publish. Well-behaved bots follow it; it can’t stop the rest.")
+            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        if let error { Text(error).font(.caption).foregroundStyle(.red) }
+    }
+
+    private func set(_ on: Bool) {
+        // The API rewrites siteConfig.json; pending edits go first.
+        doc.saveNow()
+        busy = true
+        Task {
+            let r = await model.callAPI("POST", "/api/ai-blocking", body: ["enabled": on])
+            error = r.status >= 400 ? "Couldn’t change it (\(r.status))." : nil
+            busy = false
+        }
     }
 }
 

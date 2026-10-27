@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 import UniformTypeIdentifiers
 import WebKit
 
@@ -20,9 +21,12 @@ final class PackageSchemeHandler: NSObject, WKURLSchemeHandler {
     private let queue = DispatchQueue(label: "PackageSchemeHandler", qos: .userInitiated, attributes: .concurrent)
     /// Tasks WebKit cancelled; touching them afterwards raises. Main thread only.
     private var stopped = Set<ObjectIdentifier>()
+    /// Animated images are served as one still frame (see `still(_:)`).
+    private let stillImages: Bool
 
-    init(document: SiteDocument) {
+    init(document: SiteDocument, stillImages: Bool = false) {
         self.document = document
+        self.stillImages = stillImages
     }
 
     func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
@@ -55,7 +59,39 @@ final class PackageSchemeHandler: NSObject, WKURLSchemeHandler {
                                 completion: finish)
             return
         }
-        queue.async { finish(Self.respond(to: request, package: root)) }
+        queue.async { [stillImages] in
+            let response = Self.respond(to: request, package: root)
+            finish(stillImages ? Self.still(response) : response)
+        }
+    }
+
+    /// An animated GIF, WebP or PNG as the frame it rests on longest (the
+    /// end of a typing effect, say), for a page drawn where nothing animates.
+    private static func still(_ response: Response) -> Response {
+        guard response.status == 200, response.headers["Content-Type"]?.hasPrefix("image/") == true,
+              let source = CGImageSourceCreateWithData(response.body as CFData, nil),
+              CGImageSourceGetCount(source) > 1 else { return response }
+        let delay = { (i: Int) -> Double in
+            let props = CGImageSourceCopyPropertiesAtIndex(source, i, nil) as? [CFString: Any] ?? [:]
+            for key in [kCGImagePropertyGIFDictionary, kCGImagePropertyWebPDictionary, kCGImagePropertyPNGDictionary] {
+                if let d = props[key] as? [CFString: Any], let t = (d[kCGImagePropertyGIFUnclampedDelayTime] ?? d[kCGImagePropertyWebPUnclampedDelayTime]
+                    ?? d[kCGImagePropertyAPNGUnclampedDelayTime] ?? d[kCGImagePropertyGIFDelayTime]) as? Double { return t }
+            }
+            return 0
+        }
+        let frames = 0..<CGImageSourceGetCount(source)
+        // The last of the longest, so a final hold wins a tie with an opening one.
+        let rest = frames.reduce(0) { delay($1) >= delay($0) ? $1 : $0 }
+        let data = NSMutableData()
+        guard let image = CGImageSourceCreateImageAtIndex(source, rest, nil),
+              let dest = CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil) else { return response }
+        CGImageDestinationAddImage(dest, image, nil)
+        guard CGImageDestinationFinalize(dest) else { return response }
+        var still = response
+        still.body = data as Data
+        still.headers["Content-Type"] = "image/png"
+        still.headers["Content-Length"] = String(data.length)
+        return still
     }
 
     /// The editor's Deploy button reads a server-sent event stream; feed it

@@ -44,6 +44,18 @@ struct EditorRootView: View {
         .sheet(isPresented: $model.showPublish) {
             PublishSheet(model: model)
         }
+        .sheet(isPresented: $model.showUpdateSite) {
+            UpdateSiteSheet(model: model)
+        }
+        .sheet(isPresented: $model.showCodingAgents) {
+            CodingAgentsSheet(model: model)
+        }
+        .sheet(isPresented: $model.showDomain) {
+            DomainSheet(model: model)
+        }
+        .sheet(isPresented: $model.showTutorial) {
+            TutorialView()
+        }
         .sheet(item: $model.newItem) { req in
             NewItemSheet(model: model, kind: req.kind, category: req.category)
         }
@@ -74,11 +86,14 @@ struct EditorRootView: View {
             .pickerStyle(.segmented)
             .help("Preview size")
 
-            Picker("Language", selection: Binding(get: { model.language }, set: { model.setLanguage($0) })) {
-                ForEach(EditorModel.languages, id: \.0) { code, label in Text(label).tag(code) }
+            // Once the site has more than English (Site Structure ▸ Languages).
+            if model.languages.count > 1 {
+                Picker("Language", selection: Binding(get: { model.language }, set: { model.setLanguage($0) })) {
+                    ForEach(model.languages, id: \.0) { code, label in Text(label).tag(code) }
+                }
+                .pickerStyle(.segmented)
+                .help("Edit and preview this language")
             }
-            .pickerStyle(.segmented)
-            .help("Edit and preview this language")
         }
         // A status, not a button group member: on its own, without the glass
         // capsule the buttons share (inside it, the text ran into its edge).
@@ -161,6 +176,8 @@ private struct Sidebar: View {
                         if let kind = Self.newKind[group.id] {
                             Button { model.requestNewItem(kind, category: "") } label: { Image(systemName: "plus") }
                                 .buttonStyle(.borderless)
+                                // In line with the rows' counts, not against the edge.
+                                .padding(.trailing, 10)
                                 .help("New \(kind.rawValue.lowercased())")
                         }
                     }
@@ -172,7 +189,7 @@ private struct Sidebar: View {
         .onChange(of: model.selection, initial: true) { revealSelection() }
     }
 
-    private static let newKind: [String: NewItemSheet.Kind] = ["projects": .project, "originals": .original, "blog": .post]
+    private static let newKind: [String: NewItemSheet.Kind] = ["pages": .page, "projects": .project, "originals": .original, "blog": .post]
 
     /// Keeps the selected page's folders (and the page) open.
     private func revealSelection() {
@@ -252,12 +269,20 @@ private struct NodeRows: View {
                         .disabled(cat == node.subtitle?.lowercased())
                 }
             }
+            let other = type == "projects" ? "originals" : "projects"
+            if model.hasPart(other) { Menu("Move to \(other.capitalized)") {
+                let cats = model.categories(other)
+                ForEach(cats, id: \.self) { cat in
+                    Button(cat.capitalized) { model.moveItem(node, toOtherSide: cat) }
+                }
+                if cats.isEmpty { Text("Make a category in \(other.capitalized) first") }
+            } }
         }
         if let path = node.previewPath {
             Divider()
             Button("Open on Live Site") { Task { await model.openLiveSite(path: path) } }
         }
-        if kind == "project" || kind == "post" {
+        if kind == "project" || kind == "post" || kind == "page" {
             Divider()
             Button("Delete “\(node.title)”…", role: .destructive) { model.deleteItem(node) }
         }

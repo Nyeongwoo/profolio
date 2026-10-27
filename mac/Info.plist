@@ -16,7 +16,7 @@
 	<array>
 		<dict>
 			<key>CFBundleTypeName</key>
-			<string>Profolio Portfolio</string>
+			<string>Profolio Site</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSHandlerRank</key>
@@ -37,7 +37,7 @@
 			<key>UTTypeIdentifier</key>
 			<string>com.nnwoo.pofole.portfolio</string>
 			<key>UTTypeDescription</key>
-			<string>Profolio Portfolio</string>
+			<string>Profolio Site</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>com.apple.package</string>
@@ -47,6 +47,7 @@
 			<dict>
 				<key>public.filename-extension</key>
 				<array>
+					<string>profolio</string>
 					<string>portfolio</string>
 				</array>
 			</dict>

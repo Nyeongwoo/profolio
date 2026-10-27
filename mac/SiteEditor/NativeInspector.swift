@@ -28,7 +28,7 @@ struct NativeInspector: View {
         ("image-grid", "Image Grid"), ("image-tab", "Image Tabs"), ("text-columns", "Text Columns"),
         ("scroll-animation", "Scroll Animation"), ("video-background", "Video"), ("feature-tabs", "Feature Tabs"),
         ("tab-switcher", "Tab Switcher"), ("accordion", "Accordion"), ("stats", "Stats"), ("model-viewer", "3D Model"),
-        ("interactive", "Interactive"),
+        ("interactive", "Interactive"), ("people", "People"), ("recent-posts", "Recent Posts"),
     ]
 
     private var key: String { form.sectionsKey }

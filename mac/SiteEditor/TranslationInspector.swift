@@ -26,7 +26,7 @@ struct TranslationInspector: View {
     @State private var shownTodo: Set<String> = []
 
     private var lang: String { model.language }
-    private var langName: String { lang == "ko" ? "Korean" : lang == "zh" ? "Chinese" : lang.uppercased() }
+    private var langName: String { EditorModel.languageName(lang) }
     private var done: Int { entries.filter { !$0.value.isEmpty }.count }
 
     var body: some View {
@@ -174,11 +174,18 @@ struct TranslationsOverview: View {
         if model.language == "en" {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Translations").font(.headline)
-                Text("Choose KO or ZH in the toolbar. Every page then shows its English beside the translation, and this page lists what’s left to translate.")
-                    .font(.callout).foregroundStyle(.secondary)
-                HStack {
-                    Button("Korean") { model.setLanguage("ko") }
-                    Button("Chinese") { model.setLanguage("zh") }
+                if model.languages.count > 1 {
+                    Text("Choose a language in the toolbar. Every page then shows its English beside the translation, and this page lists what’s left to translate.")
+                        .font(.callout).foregroundStyle(.secondary)
+                    HStack {
+                        ForEach(model.languages.dropFirst(), id: \.0) { code, _ in
+                            Button(EditorModel.languageName(code)) { model.setLanguage(code) }
+                        }
+                    }
+                } else {
+                    Text("This site is in English only. Add a language in Site Structure ▸ Languages, then translate it here.")
+                        .font(.callout).foregroundStyle(.secondary)
+                    Button("Open Site Structure") { model.open("structure") }
                 }
             }
             .padding(16)

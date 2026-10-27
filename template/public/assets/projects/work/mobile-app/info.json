@@ -1,0 +1,66 @@
+{
+  "overviewTitle": "Mobile App",
+  "overview": "An app from research to release — what people needed and what you built.",
+  "type": "Client project",
+  "duration": "2026",
+  "team": "",
+  "role": "UX / UI",
+  "metaFields": [
+    {
+      "key": "type",
+      "label": "Type"
+    },
+    {
+      "key": "duration",
+      "label": "Duration"
+    },
+    {
+      "key": "role",
+      "label": "Role"
+    }
+  ],
+  "sections": [
+    {
+      "id": "Overview-mobile-app",
+      "label": "Overview",
+      "type": "text",
+      "images": [],
+      "blocks": [],
+      "lines": [
+        {
+          "kind": "subtitle",
+          "text": "Overview",
+          "size": "21px",
+          "weight": "700",
+          "color": "",
+          "font": ""
+        },
+        {
+          "kind": "title",
+          "text": "A first section.",
+          "size": "36px",
+          "weight": "700",
+          "color": "",
+          "font": ""
+        },
+        {
+          "kind": "body",
+          "text": "Write about your work here. Add images and more sections from the inspector.",
+          "size": "17px",
+          "weight": "500",
+          "color": "",
+          "font": ""
+        }
+      ]
+    },
+    {
+      "id": "Visuals-mobile-app",
+      "label": "Visuals",
+      "type": "images",
+      "images": [
+        1
+      ],
+      "blocks": []
+    }
+  ]
+}

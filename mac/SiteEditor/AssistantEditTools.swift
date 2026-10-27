@@ -11,7 +11,7 @@ extension LabModel {
             name: "content_edit",
             description: """
             Proposes changes to one content JSON file and applies them if the person accepts. file: the repository path \
-            page_read gives (e.g. public/assets/projects/product/maizy/info.json, src/data/home.json) or a translation file \
+            page_read gives (e.g. public/assets/projects/work/desk-lamp/info.json, src/data/home.json) or a translation file \
             (src/i18n/ko.json, src/i18n/zh.json — “strings” maps English text to its translation). Each change: op “set” \
             (path → value; creates missing object keys), “insert” (path ends in an array index; the index = length appends) \
             or “remove” (path). path is an array of keys (strings) and array indexes (integers), e.g. ["sections", 2, "lines", 0, "text"]. \
@@ -36,7 +36,7 @@ extension LabModel {
             description: """
             Proposes adding an empty section to a page (page id from site_outline) and adds it if accepted; returns where it \
             went, to fill with content_edit. type: text, images, image-text, image-text-carousel, image-grid, image-tab, \
-            text-columns, scroll-animation, video-background, feature-tabs, tab-switcher, accordion, stats, model-viewer, \
+            text-columns, scroll-animation, video-background, feature-tabs, tab-switcher, accordion, stats, model-viewer, people, recent-posts, \
             interactive. after: the section index to put it after (omit for the end).
             """,
             properties: ["page": ["type": "string"], "type": ["type": "string"], "after": ["type": "integer"], "label": ["type": "string"]],
@@ -48,11 +48,12 @@ extension LabModel {
         server.register(.init(
             name: "item_create",
             description: """
-            Proposes making a new page and makes it if accepted. kind: project, original, post (blog post) or category. \
+            Proposes making a new page and makes it if accepted. kind: page (one of the site's own pages, with its own menu \
+            tab: title, id = its address without the slash, e.g. research → /research), project, original, post (blog post) or category. \
             For project/original: category (an existing one from site_outline), id (lowercase-with-dashes), title. \
             For post: id, title, category (a blog category id). For category: type (project or original) and title (its name).
             """,
-            properties: ["kind": ["type": "string", "enum": ["project", "original", "post", "category"]],
+            properties: ["kind": ["type": "string", "enum": ["page", "project", "original", "post", "category"]],
                          "category": ["type": "string"], "id": ["type": "string"], "title": ["type": "string"], "type": ["type": "string"]],
             required: ["kind", "title"]) { [weak self] args, caller in
             guard let self else { return .error("No window.") }
@@ -61,8 +62,8 @@ extension LabModel {
 
         server.register(.init(
             name: "translations_find",
-            description: "Looks up translations: lang ko or zh; query matches the English text or the translation (case-insensitive). Up to 60 entries.",
-            properties: ["lang": ["type": "string", "enum": ["ko", "zh"]], "query": ["type": "string"]],
+            description: "Looks up translations: lang is one of the site's languages besides English (ko, zh, ja…); query matches the English text or the translation (case-insensitive). Up to 60 entries.",
+            properties: ["lang": ["type": "string", "enum": EditorModel.otherLanguageCodes], "query": ["type": "string"]],
             required: ["lang"]) { [weak self] args, _ in
             guard let self, let site = self.siteFolder, let lang = args["lang"] as? String,
                   let data = try? Data(contentsOf: site.appendingPathComponent("src/i18n/\(lang).json")),
@@ -214,6 +215,9 @@ extension LabModel {
             guard !category.isEmpty else { return .error("A category is needed (site_outline lists them).") }
             summary = "New \(kind) “\(title)” in \(category) (\(slug))"
         case "post": summary = "New blog post “\(title)” (\(slug))"
+        case "page":
+            guard !NewItemSheet.reserved.contains(slug) else { return .error("/\(slug) is one of the site's own addresses; pick another id.") }
+            summary = "New page “\(title)” at /\(slug), added to the menu"
         case "category":
             guard let type = args["type"] as? String, type == "project" || type == "original" else { return .error("type must be project or original.") }
             summary = "New \(type) category “\(title)”"
@@ -224,10 +228,11 @@ extension LabModel {
         switch kind {
         case "project", "original": error = await editor.createItem(kind, category: category, id: slug, title: title)
         case "post": error = await editor.createPost(id: slug, title: title, category: category.isEmpty ? "others" : category)
+        case "page": error = await editor.createPage(id: slug, title: title, path: "/\(slug)")
         default: error = await editor.addCategory(args["type"] as! String, title)
         }
         if let error { return .error(error) }
-        let pageID = kind == "post" ? "post:\(slug)" : kind == "category" ? nil : "\(kind):\(category)/\(slug)"
+        let pageID = kind == "post" ? "post:\(slug)" : kind == "page" ? "page:\(slug)" : kind == "category" ? nil : "\(kind):\(category)/\(slug)"
         return .text("Created\(pageID.map { " — page id \($0); it’s open now. page_read shows its content" } ?? "").")
     }
 

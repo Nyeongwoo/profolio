@@ -7,11 +7,12 @@ xcuserdata/
 DerivedData/
 build/
 
-# Built and release artifacts
+# Built and release artifacts (the feed lives on the gh-pages branch,
+# checked out at .pages/ by scripts/release-profolio.sh)
 mac/SiteEditor/StarterSite.zip
-public/profolio/*.zip
-public/profolio/*.html
-public/profolio/appcast.xml
+.pages/
+template/dist/
+template/dist-app/
 
 # Secrets: never commit
 *sparkle_private_key*

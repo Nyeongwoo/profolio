@@ -1,0 +1,8 @@
+export default function ChevronIcon({ direction = 'right', size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+      style={direction === 'left' ? { transform: 'scaleX(-1)' } : undefined}>
+      <path d="M19.1069 2.87889C20.4887 1.62327 22.6274 1.72515 23.8832 3.10674L44.7331 25.8095C47.4578 28.7764 47.5517 33.3063 44.9522 36.3835L23.9864 61.2017C22.7962 62.6404 20.6646 62.8418 19.2258 61.6516C17.7873 60.4614 17.5858 58.3298 18.7759 56.8911L39.0398 32.3943C39.6741 31.6274 39.6481 30.5109 38.9789 29.7744L18.879 7.65517C17.6234 6.27336 17.7253 4.13466 19.1069 2.87889Z" fill="currentColor" />
+    </svg>
+  )
+}

@@ -643,6 +643,9 @@ extension LabModel {
         changes, what is open). Read the site with site_outline and page_read; see what the person is looking at with \
         selection_get and preview_screenshot. Messages may start with “[Profolio context: …]” — where they are in the app. \
         app_open opens things for them (GitHub Account, Publish, a page, a Lab piece, New Site). \
+        The site's structure — menu items and order, Originals / Blog / Archive on or off, the project icon strip, the category \
+        pill bar, the bar on project pages, search, footer — is siteConfig.structure in src/data/siteConfig.json; the guide \
+        site-guide (help_read) explains it and every content file. Change it with content_edit like any other content. \
         You can change the site, always as a proposal the person sees and applies (each tool waits for Apply or Decline; \
         never claim a change is made before the tool says so): content_edit changes a page's content JSON (page_read \
         gives its file and fields) or a translation file (src/i18n/ko.json or zh.json: “strings” maps the English text \
