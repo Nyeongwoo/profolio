@@ -5,7 +5,7 @@
 	<key>GitHubClientID</key>
 	<string>$(GITHUB_CLIENT_ID)</string>
 	<key>SUFeedURL</key>
-	<string>https://nnwoo.com/profolio/appcast.xml</string>
+	<string>https://nyeongwoo.github.io/profolio/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>bkagML9DKqcKj3iaUtE9yuG64qXFlstuovkgVP2is4k=</string>
 	<key>SUEnableAutomaticChecks</key>

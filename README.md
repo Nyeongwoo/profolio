@@ -12,10 +12,10 @@ I built Profolio to run my own site, [nnwoo.com](https://nnwoo.com), which is no
 Profolio needs macOS 15 Sequoia or later.
 
 ```sh
-curl -fsSL https://nnwoo.com/profolio/install.sh | sh
+curl -fsSL https://nyeongwoo.github.io/profolio/install.sh | sh
 ```
 
-The installer ([public/profolio/install.sh](public/profolio/install.sh)) downloads the newest release from the update feed, checks the app's code signature, puts it in `/Applications` and opens it. After that, Profolio updates itself.
+The installer ([pages/install.sh](pages/install.sh)) downloads the newest release from the update feed (GitHub Releases, listed in the appcast on GitHub Pages), checks the app's code signature, puts it in `/Applications` and opens it. After that, Profolio updates itself.
 
 ## What it does
 

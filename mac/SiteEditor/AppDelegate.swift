@@ -3,7 +3,7 @@ import Sparkle
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    /// Sparkle: checks https://nnwoo.com/profolio/appcast.xml (Info.plist
+    /// Sparkle: checks https://nyeongwoo.github.io/profolio/appcast.xml (Info.plist
     /// SUFeedURL) once a day and offers new versions, verified against the
     /// EdDSA public key in Info.plist (SUPublicEDKey). Releases are made with
     /// scripts/release-profolio.sh.

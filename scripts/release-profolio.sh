@@ -27,7 +27,8 @@ DERIVED=${DERIVED:-$HOME/Library/Caches/Profolio-release}
 FEED=$DERIVED/feed
 PAGES=$ROOT/.pages
 REPO=Nyeongwoo/profolio
-ICLOUD="$HOME/Library/Mobile Documents/com~apple~CloudDocs/nnwoo"
+# A trial run sets DERIVED to a scratch folder and ICLOUD to "" (no copy).
+ICLOUD=${ICLOUD-"$HOME/Library/Mobile Documents/com~apple~CloudDocs/nnwoo"}
 PUBLISH=
 NOTES=
 for arg in "$@"; do
@@ -95,7 +96,7 @@ cp "$FEED/appcast.xml" "$PAGES/appcast.xml"
 cp "$ROOT/pages/install.sh" "$PAGES/install.sh"
 touch "$PAGES/.nojekyll"
 
-if [[ -d $ICLOUD ]]; then
+if [[ -n $ICLOUD && -d $ICLOUD ]]; then
   rm -rf "$ICLOUD/Profolio.app"
   ditto "$APP" "$ICLOUD/Profolio.app"
   mkdir -p "$ICLOUD/Releases"
