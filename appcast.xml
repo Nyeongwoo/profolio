@@ -1,0 +1,18 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Profolio</title>
+        <item>
+            <title>2.1.2</title>
+            <pubDate>Tue, 27 Oct 2026 20:33:39 -0400</pubDate>
+            <sparkle:version>63</sparkle:version>
+            <sparkle:shortVersionString>2.1.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<ul>
+<li>Updates now come from Profolio's GitHub repository (github.com/Nyeongwoo/profolio)</li>
+</ul>
+]]></description>
+            <enclosure url="https://github.com/Nyeongwoo/profolio/releases/download/v2.1.2/Profolio-2.1.2.zip" length="9262693" type="application/octet-stream" sparkle:edSignature="q98m27dIYKJWU57xC3vmuCve03jXdyXHaGWKBvhQMg6PUu6184YwR+rBp0xJw1a5MO6c8pQGb5mSuksxiawzCQ=="/>
+        </item>
+    </channel>
+</rss>
