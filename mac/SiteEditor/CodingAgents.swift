@@ -29,6 +29,28 @@ enum CodingAgent: String, CaseIterable, Identifiable {
 
     var executable: URL? { LoginShell.which(command) }
 
+    /// For an agent Profolio doesn't set up (another Mac, an editor's own
+    /// Claude Code or Codex): everything it needs to work on the site, to
+    /// paste in with the change written at the end.
+    static func handoffPrompt(owner: String?, repo: String?, branch: String?) -> String {
+        let address = owner.flatMap { o in repo.map { "https://github.com/\(o)/\($0)" } } ?? "<the site’s GitHub repository>"
+        let branch = branch ?? "main"
+        let folder = repo.map { "~/Profolio/\($0)" } ?? "~/Profolio/<repository name>"
+        return """
+        I edit my website with Profolio, a Mac app. Its code is in \(address) (branch \(branch)).
+
+        1. If \(folder) doesn’t exist, clone the repository there; otherwise pull the latest from \(branch).
+        2. Read AGENTS.md (or CLAUDE.md) first if it’s there — it explains how the site is built and where its content lives.
+        3. Make the change I describe below.
+        4. Run `npm install` and `npm run build` to check that it still builds.
+        5. Commit with a clear message and push to \(branch).
+
+        Leave the content I edit in Profolio (src/data/*.json, src/i18n/*.json, public/assets/**) alone unless I ask; Profolio brings it in when I next publish.
+
+        The change: <describe what you want here>
+        """
+    }
+
     /// "2.1.3 (Claude Code)", or nil when it isn't installed or won't say.
     func version() -> String? {
         guard let exe = executable else { return nil }
@@ -62,7 +84,8 @@ enum Shell {
         group.enter(); DispatchQueue.global().async { stderr = err.fileHandleForReading.readDataToEndOfFile(); group.leave() }
         while p.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.05) }
         if p.isRunning { p.terminate() }
-        p.waitUntilExit()
+        // Not waitUntilExit, which runs the run loop: views call this while drawing.
+        while p.isRunning { Thread.sleep(forTimeInterval: 0.01) }
         group.wait()
         return Output(status: p.terminationStatus, stdout: String(decoding: stdout, as: UTF8.self), stderr: String(decoding: stderr, as: UTF8.self))
     }
@@ -94,7 +117,8 @@ struct WorkingCopy {
     var exists: Bool { FileManager.default.fileExists(atPath: folder.appendingPathComponent(".git").path) }
 
     /// Whether git works here (it comes with Apple's command line tools).
-    static var hasGit: Bool { Shell.run("/usr/bin/xcode-select", ["-p"], timeout: 10).status == 0 }
+    /// Asked once; installing the tools means reopening Profolio anyway.
+    static let hasGit: Bool = Shell.run("/usr/bin/xcode-select", ["-p"], timeout: 10).status == 0
 
     struct Status { let changed: Int; let ahead: Int; let behind: Int }
 

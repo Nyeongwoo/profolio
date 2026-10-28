@@ -54,7 +54,11 @@ struct EditorRootView: View {
             DomainSheet(model: model)
         }
         .sheet(isPresented: $model.showTutorial) {
-            TutorialView()
+            let repo = model.document.manifest?.repository
+            TutorialView(prompt: CodingAgent.handoffPrompt(owner: repo?.owner, repo: repo?.name, branch: repo?.branch)) {
+                // After the tour's sheet has gone.
+                DispatchQueue.main.async { model.showCodingAgents = true }
+            }
         }
         .sheet(item: $model.newItem) { req in
             NewItemSheet(model: model, kind: req.kind, category: req.category)

@@ -38,8 +38,10 @@ enum LoginShell {
         p.standardOutput = out
         p.standardError = FileHandle.nullDevice
         try? p.run()
-        p.waitUntilExit()
         let found = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        // Not waitUntilExit: it runs the run loop, and a view asking for the
+        // path again from there (Coding Agents' sheet) crashed the app.
+        while p.isRunning { usleep(1_000) }
         return found.isEmpty ? "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin" : found
     }()
 

@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// File ▸ Coding Agents…: Claude Code and Codex (installed? signed in?), and
@@ -39,6 +40,19 @@ struct CodingAgentsSheet: View {
             if let message {
                 Label(message, systemImage: failed ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                     .foregroundStyle(failed ? .orange : .green).font(.callout).fixedSize(horizontal: false, vertical: true)
+            }
+            Divider()
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Using your own Claude Code or Codex").font(.callout.weight(.semibold))
+                Text("If installing here doesn’t work, or you use an agent elsewhere, paste this prompt into it and write your change at the end.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Button("Copy Prompt") {
+                    let repo = model.document.manifest?.repository
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(CodingAgent.handoffPrompt(owner: repo?.owner, repo: repo?.name, branch: repo?.branch), forType: .string)
+                    message = "Prompt copied. Paste it into Claude Code or Codex and describe your change at the end."
+                    failed = false
+                }
             }
             HStack {
                 if let busy { ProgressView().controlSize(.small); Text(busy).font(.callout).foregroundStyle(.secondary) }
