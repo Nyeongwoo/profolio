@@ -1258,7 +1258,7 @@ export default function ProjectDetail() {
 
     if (section.type === 'interactive') {
       return (
-        <section key={`${section.id}-${idx}`} id={section.id} className="detail-section-mid" style={sectionBgStyle(section, category, id, isMobile)}>
+        <section key={`${section.id}-${idx}`} id={section.id} className="detail-section-mid" style={{ ...sectionBgStyle(section, category, id, isMobile), ...(info?.hideHero && idx === 0 ? { paddingTop: 0 } : {}) }}>
           <LabEmbed section={section} isMobile={isMobile} />
           {section.lines && section.lines.length > 0 && (
             <div className="detail-block-mid-body">
@@ -1433,13 +1433,17 @@ export default function ProjectDetail() {
         </nav>
       )}
 
-      <div className="detail-hero" style={{aspectRatio: tier !== 'desktop' ? '5/4' : '16/9', overflow:'hidden'}}>
-        <ImageWithFallback basePath={
-          tier === 'tablet' && info?.heroTabletImage ? info.heroTabletImage
-          : useMobileImg && info?.heroMobileImage ? info.heroMobileImage
-          : (info?.heroImage || `/assets/projects/${category}/${id}/hero`)
-        } alt={project.title} style={{width:'100%', height:'100%', objectFit:'cover'}} lazy={false} />
-      </div>
+      {/* info.hideHero: no hero image, the first section starts right under
+          the nav (an interactive piece that brings its own opening). */}
+      {!info?.hideHero && (
+        <div className="detail-hero" style={{aspectRatio: tier !== 'desktop' ? '5/4' : '16/9', overflow:'hidden'}}>
+          <ImageWithFallback basePath={
+            tier === 'tablet' && info?.heroTabletImage ? info.heroTabletImage
+            : useMobileImg && info?.heroMobileImage ? info.heroMobileImage
+            : (info?.heroImage || `/assets/projects/${category}/${id}/hero`)
+          } alt={project.title} style={{width:'100%', height:'100%', objectFit:'cover'}} lazy={false} />
+        </div>
+      )}
 
       {info && (info.overviewTitle || info.overviewLogo || info.overview || info.role || info.duration || info.team || info.type) && (
         <section id="overview" ref={overviewRef} className={`detail-overview${tier === 'desktop' ? ' detail-overview--fill' : ''}`} style={{

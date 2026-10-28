@@ -1408,6 +1408,12 @@ export default function EditorProject() {
       )}
 
       <Card title="Overview" collapsible defaultOpen={false}>
+        <Field label="Hero">
+          <label style={{display:'flex', alignItems:'center', gap:'8px', cursor:'pointer', fontSize:'13px', color:'var(--ed-text)', height:'36px'}}>
+            <input type="checkbox" checked={!!info.hideHero} onChange={e => updateMeta('hideHero', e.target.checked || undefined)} />
+            Hide hero (the first section starts under the nav)
+          </label>
+        </Field>
         <ImageField label="Hero Image" value={info.heroImage || `/assets/projects/${category}/${id}/hero`} onChange={v => updateMeta('heroImage', v || undefined)} />
         <ImageField label="Hero Image (Mobile override)" value={info.heroMobileImage||''} onChange={v => updateMeta('heroMobileImage', v || undefined)} />
         <ImageField label="Hero Image (Tablet override — optional, empty falls back to Tablet Images below)" value={info.heroTabletImage||''} onChange={v => updateMeta('heroTabletImage', v || undefined)} />
