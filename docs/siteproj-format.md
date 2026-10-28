@@ -164,7 +164,7 @@ adds nor deletes them. Removing them from the repo is a separate decision.
 
 ## iCloud Drive
 
-Keep the package in iCloud Drive (by default `iCloud Drive/nnwoo/`) and open
+Keep the package in iCloud Drive (in a folder of your choice) and open
 it from any Mac with Profolio. Edits are written straight into the package,
 so iCloud syncs each save; there is no separate Save step.
 

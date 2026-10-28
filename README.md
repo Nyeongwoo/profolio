@@ -69,4 +69,4 @@ To work on the site template, run `npm install` and `npm run dev:all` in `templa
 
 ## License
 
-Copyright © 2026 Nyeongwoo Kwon. All rights reserved. The source is here to read, not to reuse. See [LICENSE](LICENSE). libwebp keeps its own BSD license.
+Copyright © 2026 Nyeongwoo (github.com/Nyeongwoo). All rights reserved. The source is here to read, not to reuse. See [LICENSE](LICENSE). libwebp keeps its own BSD license.
